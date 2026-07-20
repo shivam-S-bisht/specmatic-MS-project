@@ -1,0 +1,125 @@
+openapi: 3.0.1
+info:
+  title: Payment Service API
+  version: 1.0.0
+paths:
+  /payments:
+    post:
+      summary: Charge amount for order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+            examples:
+              CARD_PAYMENT:
+                value:
+                  paymentType: card
+                  orderId: 1
+                  amount: 2400
+                  cardNumber: "1234-5678-9012-3456"
+                  cardExpiry: "12/28"
+                  cardCvv: "123"
+              BANK_TRANSFER:
+                value:
+                  paymentType: bank_transfer
+                  orderId: 1
+                  amount: 2400
+                  bankAccountNumber: "9876543210"
+                  bankRoutingNumber: "ROUT1234"
+                  bankAccountHolder: "John Doe"
+      responses:
+        '200':
+          description: Payment charged successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - paymentId
+                  - status
+                properties:
+                  paymentId:
+                    type: integer
+                  status:
+                    type: string
+              examples:
+                PROCESS_PAYMENT:
+                  value:
+                    paymentId: 100
+                    status: SUCCESS
+        '400':
+          description: Payment declined or invalid payment request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    error: "Payment declined"
+components:
+  schemas:
+    CardPaymentRequest:
+      type: object
+      required:
+        - paymentType
+        - orderId
+        - amount
+        - cardNumber
+        - cardExpiry
+        - cardCvv
+      properties:
+        paymentType:
+          type: string
+          enum: [ card ]
+        orderId:
+          type: integer
+        amount:
+          type: integer
+        cardNumber:
+          type: string
+        cardExpiry:
+          type: string
+        cardCvv:
+          type: string
+    BankTransferPaymentRequest:
+      type: object
+      required:
+        - paymentType
+        - orderId
+        - amount
+        - bankAccountNumber
+        - bankRoutingNumber
+        - bankAccountHolder
+      properties:
+        paymentType:
+          type: string
+          enum: [ bank_transfer ]
+        orderId:
+          type: integer
+        amount:
+          type: integer
+        bankAccountNumber:
+          type: string
+        bankRoutingNumber:
+          type: string
+        bankAccountHolder:
+          type: string
+    PaymentRequest:
+      oneOf:
+        - $ref: "#/components/schemas/CardPaymentRequest"
+        - $ref: "#/components/schemas/BankTransferPaymentRequest"
+      discriminator:
+        propertyName: paymentType
+        mapping:
+          card: "#/components/schemas/CardPaymentRequest"
+          bank_transfer: "#/components/schemas/BankTransferPaymentRequest"
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

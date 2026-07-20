@@ -1,0 +1,189 @@
+openapi: 3.0.1
+info:
+  title: Order Service API
+  version: 1.0.0
+servers:
+  - url: http://order-service:3000
+paths:
+  /orders:
+    post:
+      summary: Place a new order
+      operationId: placeOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itemId
+                - quantity
+              properties:
+                itemId:
+                  type: integer
+                quantity:
+                  type: integer
+            examples:
+              PLACE_ORDER:
+                value:
+                  itemId: 1
+                  quantity: 2
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                PLACE_ORDER:
+                  value:
+                    orderId: 1
+                    itemId: 1
+                    quantity: 2
+                    status: CONFIRMED
+        '400':
+          description: Invalid order request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    error: "Invalid request payload"
+  /orders/{id}:
+    get:
+      summary: Fetch order details by ID
+      operationId: getOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          examples:
+            ORDER_DETAILS:
+              value: 1
+            NOT_FOUND:
+              value: 999
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                ORDER_DETAILS:
+                  value:
+                    orderId: 1
+                    itemId: 1
+                    quantity: 2
+                    status: CONFIRMED
+        '400':
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    error: "Invalid ID format"
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    error: "Order not found"
+    delete:
+      summary: Cancel or delete an order
+      operationId: cancelOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          examples:
+            ORDER_DETAILS:
+              value: 1
+            NOT_FOUND:
+              value: 999
+            UNAUTHORIZED:
+              value: 1
+        - name: X-API-Key
+          in: header
+          required: true
+          schema:
+            type: string
+          examples:
+            ORDER_DETAILS:
+              value: "APIKEY1234"
+            NOT_FOUND:
+              value: "APIKEY1234"
+            UNAUTHORIZED:
+              value: "INVALID_KEY"
+      responses:
+        '204':
+          description: Order deleted successfully
+        '400':
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    error: "Invalid ID format"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                UNAUTHORIZED:
+                  value:
+                    error: "Unauthorized API key"
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    error: "Order not found"
+components:
+  schemas:
+    Order:
+      type: object
+      required:
+        - orderId
+        - itemId
+        - quantity
+        - status
+      properties:
+        orderId:
+          type: integer
+        itemId:
+          type: integer
+        quantity:
+          type: integer
+        status:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

@@ -1,0 +1,74 @@
+openapi: 3.0.1
+info:
+  title: Shipping Service API
+  version: 1.0.0
+paths:
+  /shipments/{orderId}:
+    get:
+      summary: Retrieve shipment details by order ID
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+          examples:
+            SHIPMENT_DETAILS:
+              value: 1
+            NOT_FOUND:
+              value: 999
+      responses:
+        '200':
+          description: Shipment status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+              examples:
+                SHIPMENT_DETAILS:
+                  value:
+                    orderId: 1
+                    trackingNumber: "TRACK-1000"
+                    status: SHIPPED
+        '400':
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    error: "Invalid ID format"
+        '404':
+          description: Shipment details not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    error: "Shipment not found"
+components:
+  schemas:
+    Shipment:
+      type: object
+      required:
+        - orderId
+        - trackingNumber
+        - status
+      properties:
+        orderId:
+          type: integer
+        trackingNumber:
+          type: string
+        status:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

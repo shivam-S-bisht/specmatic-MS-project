@@ -1,0 +1,126 @@
+openapi: 3.0.1
+info:
+  title: Inventory Service API
+  version: 1.0.0
+paths:
+  /items/reserve:
+    post:
+      summary: Reserve stock for an item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+                - quantity
+              properties:
+                id:
+                  type: integer
+                quantity:
+                  type: integer
+            examples:
+              RESERVE_LAPTOP:
+                value:
+                  id: 1
+                  quantity: 2
+      responses:
+        '200':
+          description: Stock reserved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+              examples:
+                RESERVE_LAPTOP:
+                  value:
+                    status: success
+        '400':
+          description: Out of stock or invalid reserve request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    error: "Out of stock or invalid request"
+  /items/{id}:
+    get:
+      summary: Fetch item details by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          examples:
+            ITEM_DETAILS:
+              value: 1
+            NOT_FOUND:
+              value: 999
+      responses:
+        '200':
+          description: Item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+              examples:
+                ITEM_DETAILS:
+                  value:
+                    id: 1
+                    name: Laptop
+                    price: 1200
+                    stock: 50
+        '400':
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                BAD_REQUEST:
+                  value:
+                    error: "Invalid ID format"
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                NOT_FOUND:
+                  value:
+                    error: "Item not found"
+components:
+  schemas:
+    Item:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - stock
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: integer
+        stock:
+          type: integer
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

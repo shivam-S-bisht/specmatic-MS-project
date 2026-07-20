@@ -1,0 +1,53 @@
+asyncapi: 3.0.0
+info:
+  title: Microservices Event Stream
+  version: 1.0.0
+  description: Event-driven updates for the distributed system
+servers:
+  localKafka:
+    host: kafka:9092
+    protocol: kafka
+    description: Development Kafka Broker
+channels:
+  orderEvents:
+    address: order-events
+    messages:
+      orderCreated:
+        $ref: "#/components/messages/OrderCreated"
+operations:
+  publishOrderCreated:
+    description: Publishes an event when a new order is confirmed
+    action: send
+    channel:
+      $ref: "#/channels/orderEvents"
+    messages:
+      - $ref: "#/channels/orderEvents/messages/orderCreated"
+  subscribeOrderCreated:
+    description: Subscribes to order updates to trigger shipping and notifications
+    action: receive
+    channel:
+      $ref: "#/channels/orderEvents"
+    messages:
+      - $ref: "#/channels/orderEvents/messages/orderCreated"
+components:
+  messages:
+    OrderCreated:
+      name: OrderCreated
+      title: Order Created Event
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - orderId
+          - itemId
+          - quantity
+          - price
+        properties:
+          orderId:
+            type: integer
+          itemId:
+            type: integer
+          quantity:
+            type: integer
+          price:
+            type: integer
