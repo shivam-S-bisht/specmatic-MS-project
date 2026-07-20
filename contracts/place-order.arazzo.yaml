@@ -1,0 +1,41 @@
+arazzo: '1.0.0'
+info:
+  title: Order Processing and Cancellation Workflow
+  version: 1.0.0
+sourceDescriptions:
+  - name: OrderApi
+    type: openapi
+    url: ./order-api.yaml
+workflows:
+  - workflowId: PlaceAndCancelOrder
+    steps:
+      - stepId: placeOrder
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 1
+            quantity: 2
+        successCriteria:
+          - condition: '$statusCode == 201'
+        outputs:
+          orderId: '$response.body#/orderId'
+      - stepId: getOrder
+        operationId: '$sourceDescriptions.OrderApi.getOrder'
+        parameters:
+          - name: id
+            value: '$steps.placeOrder.outputs.orderId'
+            in: path
+        successCriteria:
+          - condition: '$statusCode == 200'
+      - stepId: cancelOrder
+        operationId: '$sourceDescriptions.OrderApi.cancelOrder'
+        parameters:
+          - name: id
+            value: '$steps.placeOrder.outputs.orderId'
+            in: path
+          - name: X-API-Key
+            value: 'APIKEY1234'
+            in: header
+        successCriteria:
+          - condition: '$statusCode == 204'
