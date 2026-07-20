@@ -1,0 +1,74 @@
+version: 3
+
+systemUnderTest:
+  service:
+    definitions:
+      - definition:
+          source:
+            filesystem:
+              directory: ../contracts
+          specs:
+            - spec:
+                id: orderApiSpec
+                path: order-api.yaml
+    runOptions:
+      openapi:
+        type: test
+        baseUrl: "http://order-service:3000"
+        swaggerUrl: "http://order-service:3000/swagger.json"
+        filter: "PATH!='/swagger.json'"
+    settings:
+      schemaResiliencyTests: all
+
+dependencies:
+  services:
+    - service:
+        definitions:
+          - definition:
+              source:
+                filesystem:
+                  directory: ../contracts
+              specs:
+                - inventory-api.yaml
+        runOptions:
+          openapi:
+            type: mock
+            baseUrl: "http://specmatic-test:9001"
+        data:
+          dictionary:
+            path: ../contracts/dictionary.yaml
+    - service:
+        definitions:
+          - definition:
+              source:
+                filesystem:
+                  directory: ../contracts
+              specs:
+                - payment-api.yaml
+        runOptions:
+          openapi:
+            type: mock
+            baseUrl: "http://specmatic-test:9002"
+    - service:
+        definitions:
+          - definition:
+              source:
+                filesystem:
+                  directory: ../contracts
+              specs:
+                - events-api.yaml
+        runOptions:
+          asyncapi:
+            type: mock
+            servers:
+              - host: "kafka:9092"
+                protocol: kafka
+
+specmatic:
+  governance:
+    successCriteria:
+      minCoveragePercentage: 100
+      maxMissedOperationsInSpec: 0
+      enforce: true
+  license:
+    path: /specmatic/specmatic-license.txt

@@ -1,0 +1,27 @@
+version: 3
+
+systemUnderTest:
+  service:
+    definitions:
+      - definition:
+          source:
+            filesystem:
+              directory: ../contracts
+          specs:
+            - payment-api.yaml
+    runOptions:
+      openapi:
+        type: test
+        baseUrl: "http://payment-service:3002"
+        swaggerUrl: "http://payment-service:3002/swagger.json"
+    settings:
+      schemaResiliencyTests: all
+
+specmatic:
+  governance:
+    successCriteria:
+      minCoveragePercentage: 100
+      maxMissedOperationsInSpec: 0
+      enforce: true
+  license:
+    path: /specmatic/specmatic-license.txt

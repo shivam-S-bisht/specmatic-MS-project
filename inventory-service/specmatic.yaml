@@ -1,0 +1,27 @@
+version: 3
+
+systemUnderTest:
+  service:
+    definitions:
+      - definition:
+          source:
+            filesystem:
+              directory: ../contracts
+          specs:
+            - inventory-api.yaml
+    runOptions:
+      openapi:
+        type: test
+        baseUrl: "http://inventory-service:3001"
+        swaggerUrl: "http://inventory-service:3001/swagger.json"
+    settings:
+      schemaResiliencyTests: all
+
+specmatic:
+  governance:
+    successCriteria:
+      minCoveragePercentage: 100
+      maxMissedOperationsInSpec: 0
+      enforce: true
+  license:
+    path: /specmatic/specmatic-license.txt
