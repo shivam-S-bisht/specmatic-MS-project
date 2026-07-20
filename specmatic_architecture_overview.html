@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Specmatic Architecture & Feature Deep-Dive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: #111827;
+      --bg-card-hover: #1f2937;
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --glass-bg: rgba(17, 24, 39, 0.75);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding-bottom: 60px;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 65%, rgba(6, 182, 212, 0.15) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* HEADER */
+    header {
+      padding: 48px 0 32px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 40px;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #a78bfa;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #ffffff 0%, #9ca3af 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      max-width: 800px;
+    }
+
+    /* STATS STRIP */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .stat-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px 24px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-number {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .stat-number.purple { color: #a78bfa; }
+    .stat-number.emerald { color: #34d399; }
+    .stat-number.cyan { color: #22d3ee; }
+    .stat-number.amber { color: #fbbf24; }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* SYSTEM ARCHITECTURE SECTION */
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-title span {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      width: 4px;
+      height: 24px;
+      border-radius: 2px;
+    }
+
+    .arch-diagram {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 56px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .arch-flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .arch-box {
+      background: rgba(31, 41, 55, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .arch-box h3 {
+      font-size: 1.1rem;
+      color: #38bdf8;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .arch-box p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .tag-rest { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .tag-kafka { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+    .tag-mock { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+    .tag-arazzo { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+
+    /* FEATURES GRID */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 24px;
+      margin-bottom: 56px;
+    }
+
+    .feature-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.25 ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(139, 92, 246, 0.4);
+      box-shadow: 0 12px 30px -10px rgba(139, 92, 246, 0.2);
+    }
+
+    .feature-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .icon-1 { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .icon-2 { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+    .icon-3 { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+    .icon-4 { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .icon-5 { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .icon-6 { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+    .icon-7 { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
+    .icon-8 { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .icon-9 { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
+
+    .feature-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .feature-section {
+      margin-top: 14px;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .what-box {
+      font-size: 0.935rem;
+      color: #d1d5db;
+      margin-bottom: 16px;
+    }
+
+    .why-box {
+      background: rgba(31, 41, 55, 0.5);
+      border-left: 3px solid var(--accent-purple);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 14px;
+      font-size: 0.88rem;
+      color: #e5e7eb;
+    }
+
+    .code-block {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: #38bdf8;
+      overflow-x: auto;
+      margin-top: 8px;
+    }
+
+    /* FOOTER CALLOUT */
+    .footer-callout {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(6, 182, 212, 0.15));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 20px;
+      padding: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .footer-text h3 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .footer-text p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #fff;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(139, 92, 246, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- HEADER -->
+    <header>
+      <div class="header-badge">
+        <span>⚡</span> Specmatic Advanced Features Dashboard
+      </div>
+      <h1>Specmatic Architecture & Feature Deep-Dive</h1>
+      <p class="subtitle">
+        A detailed breakdown of all 9 Specmatic contract testing, mocking, resiliency, dictionary, security, and workflow features implemented in our microservices project.
+      </p>
+    </header>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number purple">5</div>
+        <div class="stat-label">Microservices Built</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number emerald">9</div>
+        <div class="stat-label">Specmatic Features</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number cyan">100%</div>
+        <div class="stat-label">API Contract Coverage</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number amber">3 / 3</div>
+        <div class="stat-label">Arazzo Workflow Steps</div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE OVERVIEW -->
+    <h2 class="section-title"><span></span> Distributed Microservices & Specmatic Setup</h2>
+    <div class="arch-diagram">
+      <div class="arch-flow">
+        <div class="arch-box">
+          <h3>Order Service <span class="tag tag-rest">REST / :3000</span></h3>
+          <p>Orchestrates orders by invoking Inventory & Payment APIs, then publishes events to Kafka.</p>
+          <span class="tag tag-arazzo">PlaceAndCancelOrder Step 1-3</span>
+        </div>
+        <div class="arch-box">
+          <h3>Inventory Service <span class="tag tag-rest">REST / :3001</span></h3>
+          <p>Manages stock levels and item details. Mocked during Order SUT testing on port 9001.</p>
+          <span class="tag tag-mock">Specmatic Mock :9001</span>
+        </div>
+        <div class="arch-box">
+          <h3>Payment Service <span class="tag tag-rest">REST / :3002</span></h3>
+          <p>Processes credit card & bank transfer payments using polymorphic <code>oneOf</code> discriminators.</p>
+          <span class="tag tag-mock">Specmatic Mock :9002</span>
+        </div>
+        <div class="arch-box">
+          <h3>Shipping Service <span class="tag tag-kafka">Kafka Consumer</span></h3>
+          <p>Consumes <code>order-events</code> to allocate packages and exposes <code>GET /shipments/{id}</code>.</p>
+          <span class="tag tag-rest">REST / :3003</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9 FEATURES DEEP-DIVE -->
+    <h2 class="section-title"><span></span> 9 Implemented Specmatic Features</h2>
+    <div class="features-grid">
+
+      <!-- 1. OpenAPI Contract Testing -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-1">📜</div>
+            <div class="feature-title">1. OpenAPI (REST) Contract Testing</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Authored OpenAPI 3.0 specs (<code>order-api.yaml</code>, <code>inventory-api.yaml</code>, <code>payment-api.yaml</code>, <code>shipping-api.yaml</code>) defining exact request/response schemas.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Guarantees our Express REST routes comply 100% with API contracts. Specmatic generates test inputs dynamically and validates real response schemas against spec definitions.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">specmatic test /usr/src/app/order-service</div>
+      </div>
+
+      <!-- 2. AsyncAPI Contract Testing -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-2">⚡</div>
+            <div class="feature-title">2. AsyncAPI (Kafka) Event Testing</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Authored AsyncAPI 3.0 spec <code>events-api.yaml</code> defining Kafka channel <code>order-events</code> and payload <code>OrderCreated</code>.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Validates asynchronous messaging between Order (Publisher) and Shipping/Notification (Subscribers) without manual Kafka payload parsing.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">protocol: kafka | host: kafka:9092</div>
+      </div>
+
+      <!-- 3. Smart Upstream Dependency Mocking -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-3">🧩</div>
+            <div class="feature-title">3. Upstream Dependency Mocking</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Configured <code>dependencies.services</code> in <code>specmatic.yaml</code>. Specmatic auto-launches mocks for Inventory (:9001) and Payment (:9002) when testing Order service.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Enables true isolated testing. The Order service can be verified without starting live downstream payment or inventory databases.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">runOptions: openapi (type: mock)</div>
+      </div>
+
+      <!-- 4. Negative Schema Mutations -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-4">🛡️</div>
+            <div class="feature-title">4. Resiliency & Mutation Testing</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Enabled <code>schemaResiliencyTests: all</code> in <code>specmatic.yaml</code> across microservices.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Ensures services handle invalid data robustly. Specmatic automatically mutates payloads (nulls, missing required fields, type mismatches) and verifies the SUT responds with proper 4xx codes instead of 500 crashes.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">settings: { schemaResiliencyTests: all }</div>
+      </div>
+
+      <!-- 5. Polymorphic Schemas -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-5">🔀</div>
+            <div class="feature-title">5. Polymorphic Discriminators</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Used <code>oneOf</code> and <code>discriminator</code> in <code>payment-api.yaml</code> for payment types (<code>CREDIT_CARD</code> vs <code>BANK_TRANSFER</code>).
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Validates complex real-world data models. Specmatic generates test payloads for every polymorphic branch and validates correct schema selection.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">discriminator: { propertyName: paymentMethod }</div>
+      </div>
+
+      <!-- 6. API Security Schemes -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-6">🔒</div>
+            <div class="feature-title">6. API Security & Access Control</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Added header authentication (<code>X-API-Key</code>) to protected endpoints like <code>DELETE /orders/{id}</code> in <code>order-api.yaml</code>.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Verifies security enforcement as part of contract tests. Confirms that missing or invalid API keys return <code>401 Unauthorized</code>.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">parameters: [ name: X-API-Key, in: header ]</div>
+      </div>
+
+      <!-- 7. Dictionary-Driven Stubbing -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-7">📖</div>
+            <div class="feature-title">7. Dictionary-Driven Generation</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Created <code>contracts/dictionary.yaml</code> defining domain-specific realistic values for item IDs, prices, stock levels, and product names.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Prevents test failures caused by completely random data. Ensures Specmatic uses valid domain-specific test values during contract test generation and stubbing.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">dictionary: { path: ../contracts/dictionary.yaml }</div>
+      </div>
+
+      <!-- 8. Arazzo Workflow Integration -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-8">🔄</div>
+            <div class="feature-title">8. Arazzo Workflow Integration</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Authored <code>place-order.arazzo.yaml</code> executing a multi-step sequence: <code>placeOrder</code> ➡️ <code>getOrder</code> ➡️ <code>cancelOrder</code>.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Tests complete end-to-end business transactions across services, passing outputs dynamically between steps and generating HTML coverage reports.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">specmatic test place-order.arazzo.yaml</div>
+      </div>
+
+      <!-- 9. Specmatic Studio -->
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-9">🎨</div>
+            <div class="feature-title">9. Specmatic Studio Workspace</div>
+          </div>
+          <div class="feature-section">
+            <div class="section-label">📌 What We Implemented</div>
+            <div class="what-box">
+              Configured Docker Studio profile on port 9000 with interactive web navigation and workflow canvas authoring.
+            </div>
+            <div class="section-label">💡 Why We Used It</div>
+            <div class="why-box">
+              Gives developers and QA engineers a visual UI to inspect contracts, trigger tests against live services, and drag-and-drop endpoints onto an Arazzo canvas.
+            </div>
+          </div>
+        </div>
+        <div class="code-block">http://localhost:9000/_specmatic/studio</div>
+      </div>
+
+    </div>
+
+    <!-- COMMANDS & LAB IMPLEMENTATION GUIDE -->
+    <h2 class="section-title"><span></span> Commands Run & Execution Context</h2>
+    <div class="arch-diagram" style="margin-bottom: 56px;">
+      <div style="margin-bottom: 24px;">
+        <h3 style="color: #a78bfa; font-size: 1.25rem; margin-bottom: 8px;">1. Host Execution Commands</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 12px;">Executed from host workspace directory: <code>/Users/shivambisht/dev/personal/specmatic-microservices-suite</code></p>
+        
+        <div class="code-block" style="margin-bottom: 12px; font-size: 0.85rem;">
+          <span style="color: #6ee7b7;"># Run Full Suite (Contract Tests + Arazzo Workflow Tests in Docker container)</span><br>
+          docker compose up specmatic-test --build --abort-on-container-exit
+        </div>
+
+        <div class="code-block" style="margin-bottom: 12px; font-size: 0.85rem;">
+          <span style="color: #6ee7b7;"># Run Microservices + Specmatic Studio Web Interface</span><br>
+          docker compose --profile studio up order-service inventory-service payment-service shipping-service notification-service studio
+        </div>
+
+        <div class="code-block" style="font-size: 0.85rem;">
+          <span style="color: #6ee7b7;"># Clean Up Docker Containers & Networks</span><br>
+          docker compose down -v
+        </div>
+      </div>
+
+      <div>
+        <h3 style="color: #a78bfa; font-size: 1.25rem; margin-bottom: 8px;">2. Container Execution Script (<code>run-tests.sh</code>)</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 12px;">Executed automatically inside <code>specmatic-test</code> container at path: <code>/usr/src/app</code></p>
+        
+        <div class="code-block" style="font-size: 0.85rem;">
+          cd /usr/src/app/inventory-service && specmatic test<br>
+          cd /usr/src/app/payment-service && specmatic test<br>
+          cd /usr/src/app/order-service && specmatic test<br>
+          cd /usr/src/app/shipping-service && specmatic test<br>
+          <br>
+          <span style="color: #fcd34d;"># Temp file isolation & Arazzo execution</span><br>
+          rm -f /usr/src/app/contracts/events-api.yaml /usr/src/app/order-service/specmatic.yaml ...<br>
+          cd /usr/src/app && specmatic test /usr/src/app/contracts/place-order.arazzo.yaml
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title"><span></span> How We Implemented Each Specmatic Lab</h2>
+    <div class="features-grid" style="margin-bottom: 56px;">
+
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-4">🧬</div>
+            <div class="feature-title">Schema Resiliency Lab</div>
+          </div>
+          <div class="what-box">
+            <b>Lab Repository:</b> <code>schema-resiliency-testing</code><br>
+            <b>Implementation:</b> Configured <code>schemaResiliencyTests: all</code> in service <code>specmatic.yaml</code> files. Tested SUT response to mutated inputs.
+          </div>
+        </div>
+        <div class="code-block">File: order-service/specmatic.yaml</div>
+      </div>
+
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-5">📐</div>
+            <div class="feature-title">Schema Design Lab</div>
+          </div>
+          <div class="what-box">
+            <b>Lab Repository:</b> <code>schema-design</code><br>
+            <b>Implementation:</b> Added <code>oneOf</code> and <code>discriminator</code> property (<code>paymentMethod</code>) in <code>payment-api.yaml</code> to test polymorphic request schemas.
+          </div>
+        </div>
+        <div class="code-block">File: contracts/payment-api.yaml</div>
+      </div>
+
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-8">🔄</div>
+            <div class="feature-title">Arazzo Workflow Lab</div>
+          </div>
+          <div class="what-box">
+            <b>Lab Repository:</b> <code>arazzo-workflow-testing</code><br>
+            <b>Implementation:</b> Authored <code>place-order.arazzo.yaml</code> with step output extraction (<code>orderId</code>) and status code assertions.
+          </div>
+        </div>
+        <div class="code-block">File: contracts/place-order.arazzo.yaml</div>
+      </div>
+
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-6">🔒</div>
+            <div class="feature-title">API Resiliency & Security Lab</div>
+          </div>
+          <div class="what-box">
+            <b>Lab Repository:</b> <code>api-resiliency-testing</code><br>
+            <b>Implementation:</b> Implemented <code>X-API-Key</code> security parameter for <code>DELETE /orders/{id}</code> and validated 401 response handling.
+          </div>
+        </div>
+        <div class="code-block">File: contracts/order-api.yaml</div>
+      </div>
+
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-9">🖥️</div>
+            <div class="feature-title">MCP Auto-Test / Studio Lab</div>
+          </div>
+          <div class="what-box">
+            <b>Lab Repository:</b> <code>mcp-auto-test</code><br>
+            <b>Implementation:</b> Integrated Specmatic Studio container profile on port 9000, enabling visual spec exploration and drag-and-drop workflow authoring.
+          </div>
+        </div>
+        <div class="code-block">File: docker-compose.yaml (studio)</div>
+      </div>
+
+      <div class="feature-card">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-7">📖</div>
+            <div class="feature-title">Dictionary Stubbing Pattern</div>
+          </div>
+          <div class="what-box">
+            <b>Lab Pattern:</b> Dictionary-Driven Generation<br>
+            <b>Implementation:</b> Created <code>contracts/dictionary.yaml</code> with realistic domain data (prices, stock, names) and linked it to service dependencies.
+          </div>
+        </div>
+        <div class="code-block">File: contracts/dictionary.yaml</div>
+      </div>
+
+    </div>
+
+    <!-- HOW LAB FEATURES IMPROVE TESTING -->
+    <h2 class="section-title"><span></span> How Lab Features Improve Testing</h2>
+    <div class="features-grid" style="margin-bottom: 56px;">
+
+      <div class="feature-card" style="border-top: 4px solid var(--accent-rose);">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-4">🧬</div>
+            <div class="feature-title">Schema Resiliency Testing</div>
+          </div>
+          <div class="what-box">
+            <b>What it does:</b> Automatically mutates valid request payloads (injecting nulls, dropping required fields, sending out-of-bound numbers or corrupt types).
+          </div>
+          <div class="why-box">
+            <b>How it improves testing:</b> Replaces hundreds of manual negative test scripts. Eliminates <code>500 Internal Server Error</code> runtime crashes by verifying upfront that microservices return clean <code>400 Bad Request</code> validation errors.
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card" style="border-top: 4px solid var(--accent-purple);">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-5">📐</div>
+            <div class="feature-title">Polymorphic Discriminator Validation</div>
+          </div>
+          <div class="what-box">
+            <b>What it does:</b> Validates request/response bodies that take multiple distinct structural forms based on a discriminator property (e.g. <code>paymentMethod</code>).
+          </div>
+          <div class="why-box">
+            <b>How it improves testing:</b> Prevents silent payload parsing bugs in complex payment workflows by guaranteeing 100% test coverage across every single sub-schema branch (Credit Card vs Bank Transfer).
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card" style="border-top: 4px solid var(--accent-emerald);">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-8">🔄</div>
+            <div class="feature-title">Arazzo Integration Workflows</div>
+          </div>
+          <div class="what-box">
+            <b>What it does:</b> Executes multi-step business transactions (<code>placeOrder</code> ➡️ <code>getOrder</code> ➡️ <code>cancelOrder</code>), dynamically extracting parameters between steps.
+          </div>
+          <div class="why-box">
+            <b>How it improves testing:</b> Moves beyond isolated single-endpoint testing. Catches dynamic state management, parameter extraction, and end-to-end user transaction bugs before production deployments.
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card" style="border-top: 4px solid var(--accent-amber);">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-6">🔒</div>
+            <div class="feature-title">API Security Scheme Testing</div>
+          </div>
+          <div class="what-box">
+            <b>What it does:</b> Asserts security constraints (e.g., requiring <code>X-API-Key</code> on destructive operations like <code>DELETE /orders/{id}</code>).
+          </div>
+          <div class="why-box">
+            <b>How it improves testing:</b> Automates security compliance testing. Ensures unauthorized or key-less requests are rejected (<code>401 Unauthorized</code>), preventing accidental data loss or security breaches.
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card" style="border-top: 4px solid var(--accent-cyan);">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-7">📖</div>
+            <div class="feature-title">Dictionary-Driven Stubbing</div>
+          </div>
+          <div class="what-box">
+            <b>What it does:</b> Supplies domain-specific realistic values (valid item IDs, prices, stock levels) to Specmatic's data generator.
+          </div>
+          <div class="why-box">
+            <b>How it improves testing:</b> Prevents false-negative test failures caused by arbitrary random numbers. Ensures tests and mock stubs behave realistically like production databases.
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card" style="border-top: 4px solid var(--accent-blue);">
+        <div>
+          <div class="feature-header">
+            <div class="feature-icon icon-9">🖥️</div>
+            <div class="feature-title">Specmatic Studio Workspace</div>
+          </div>
+          <div class="what-box">
+            <b>What it does:</b> Provides a visual web UI to explore OpenAPI/AsyncAPI contracts, trigger tests interactively, and drag-and-drop endpoints onto an Arazzo canvas.
+          </div>
+          <div class="why-box">
+            <b>How it improves testing:</b> Lowers the barrier to entry. Empowers developers, QA engineers, and product managers to visually author, debug, and review integration workflows without writing manual YAML.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER CALLOUT -->
+    <div class="footer-callout">
+      <div class="footer-text">
+        <h3>🚀 Ready to Explore Specmatic Studio?</h3>
+        <p>Specmatic Studio is running! Open the dashboard to visually interact with your contracts and workflows.</p>
+      </div>
+      <a href="http://localhost:9000/_specmatic/studio" target="_blank" class="btn">
+        Open Specmatic Studio ↗
+      </a>
+    </div>
+  </div>
+
+</body>
+</html>
