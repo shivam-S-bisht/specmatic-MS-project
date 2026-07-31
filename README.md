@@ -125,7 +125,7 @@ docker compose up specmatic-test --build --abort-on-container-exit
 
 ### 2. Run Specmatic Studio Web UI + Microservices
 ```bash
-docker compose --profile studio up order-service inventory-service payment-service shipping-service notification-service studio
+docker compose --profile studio up
 ```
 * Open Studio in your browser: **[http://localhost:9000/_specmatic/studio](http://localhost:9000/_specmatic/studio)**
 
