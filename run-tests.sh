@@ -21,6 +21,10 @@ cleanup() {
   cp /tmp/specmatic-backup/shipping-specmatic.yaml "$SHIPPING_SPEC_PATH"
   cp /tmp/specmatic-backup/notification-specmatic.yaml "$NOTIFICATION_SPEC_PATH"
   rm -rf /tmp/specmatic-backup
+
+  # Kill background stubs if running
+  [ -n "$STUB_9001_PID" ] && kill "$STUB_9001_PID" 2>/dev/null || true
+  [ -n "$STUB_9002_PID" ] && kill "$STUB_9002_PID" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -35,6 +39,15 @@ echo "2. Running Payment Service Contract Tests"
 echo "========================================="
 cd /usr/src/app/payment-service
 specmatic test
+
+# Start Specmatic stub servers in the background for SUT dependency mocking
+echo "Starting background stubs for SUT dependencies..."
+specmatic stub --data=/usr/src/app/contracts --port=9001 /usr/src/app/contracts/inventory-api.yaml &
+STUB_9001_PID=$!
+specmatic stub --port=9002 /usr/src/app/contracts/payment-api.yaml &
+STUB_9002_PID=$!
+echo "Waiting 3 seconds for stubs to initialize..."
+sleep 3
 
 echo "========================================="
 echo "3. Running Order Service Contract Tests"
@@ -61,12 +74,6 @@ specmatic test --filter "OPERATION-ID=subscribeOrderCreated"
 echo "========================================="
 echo "6. Running Arazzo Integration Workflow Tests"
 echo "========================================="
-# Temporary delete configurations to isolate Arazzo workflow execution
-rm -f "$EVENTS_API_PATH"
-rm -f "$ORDER_SPEC_PATH"
-rm -f "$SHIPPING_SPEC_PATH"
-rm -f "$NOTIFICATION_SPEC_PATH"
-
 cd /usr/src/app
 specmatic test /usr/src/app/contracts/place-order.arazzo.yaml --baseUrl=http://order-service:3000 --debug
 

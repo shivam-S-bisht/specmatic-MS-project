@@ -82,8 +82,8 @@ services:
       - "13000:3000"
     environment:
       PORT: 3000
-      INVENTORY_SERVICE_URL: http://inventory-service:3001
-      PAYMENT_SERVICE_URL: http://payment-service:3002
+      INVENTORY_SERVICE_URL: http://specmatic-test:9001
+      PAYMENT_SERVICE_URL: http://specmatic-test:9002
       KAFKA_BROKER: kafka:9092
       SWAGGER_PATH: /usr/src/app/contracts/order-api.yaml
     volumes:
@@ -137,6 +137,7 @@ services:
   specmatic-test:
     image: specmatic/enterprise:latest
     container_name: my-ms-specmatic-test
+    hostname: specmatic-test
     entrypoint: ["sh", "-lc"]
     command: ["sh /usr/src/app/run-tests.sh"]
     volumes:
