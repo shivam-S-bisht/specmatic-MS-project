@@ -21,6 +21,7 @@ cleanup() {
   cp /tmp/specmatic-backup/shipping-specmatic.yaml "$SHIPPING_SPEC_PATH"
   cp /tmp/specmatic-backup/notification-specmatic.yaml "$NOTIFICATION_SPEC_PATH"
   rm -rf /tmp/specmatic-backup
+  rm -f /usr/src/app/contracts/inventory-api_dictionary.yaml
 
   # Kill background stubs if running
   [ -n "$STUB_9001_PID" ] && kill "$STUB_9001_PID" 2>/dev/null || true
@@ -40,14 +41,17 @@ echo "========================================="
 cd /usr/src/app/payment-service
 specmatic test
 
+# Copy dictionary to inventory-api_dictionary.yaml so Specmatic automatically detects it
+cp /usr/src/app/contracts/dictionary.yaml /usr/src/app/contracts/inventory-api_dictionary.yaml
+
 # Start Specmatic stub servers in the background for SUT dependency mocking
 echo "Starting background stubs for SUT dependencies..."
-specmatic stub --data=/usr/src/app/contracts --port=9001 /usr/src/app/contracts/inventory-api.yaml &
+specmatic stub --port=9001 /usr/src/app/contracts/inventory-api.yaml &
 STUB_9001_PID=$!
 specmatic stub --port=9002 /usr/src/app/contracts/payment-api.yaml &
 STUB_9002_PID=$!
-echo "Waiting 3 seconds for stubs to initialize..."
-sleep 3
+echo "Waiting 5 seconds for stubs to initialize..."
+sleep 5
 
 echo "========================================="
 echo "3. Running Order Service Contract Tests"

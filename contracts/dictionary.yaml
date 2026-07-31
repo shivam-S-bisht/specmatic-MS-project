@@ -1,12 +1,13 @@
-id:
-  - 1
-  - 2
-name:
-  - "Laptop"
-  - "Smartphone"
-price:
-  - 1200
-  - 800
-stock:
-  - 50
-  - 30
+Item:
+  id:
+    - 1
+    - 2
+  name:
+    - "Laptop"
+    - "Smartphone"
+  price:
+    - 1200
+    - 800
+  stock:
+    - 50
+    - 30
