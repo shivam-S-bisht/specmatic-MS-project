@@ -141,7 +141,7 @@ services:
     command: ["sh /usr/src/app/run-tests.sh"]
     volumes:
       - .:/usr/src/app
-      - ../license.txt:/specmatic/specmatic-license.txt:ro
+      - ./license.txt:/specmatic/specmatic-license.txt:ro
     environment:
       SPECMATIC_LICENSE_PATH: /specmatic/specmatic-license.txt
 
@@ -165,7 +165,7 @@ services:
       - "9002:9002"
     volumes:
       - .:/usr/src/app
-      - ../license.txt:/specmatic/specmatic-license.txt:ro
+      - ./license.txt:/specmatic/specmatic-license.txt:ro
     environment:
       SPECMATIC_LICENSE_PATH: /specmatic/specmatic-license.txt
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
