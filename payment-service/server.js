@@ -49,7 +49,7 @@ app.post('/payments', (req, res) => {
     return res.status(400).json({ error: 'Payment declined' });
   }
 
-  res.json({ paymentId: 100, status: 'SUCCESS' });
+  res.json({ payment_id: 100, status: 'SUCCESS' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
