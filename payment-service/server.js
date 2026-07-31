@@ -29,7 +29,7 @@ app.post('/payments', (req, res) => {
     return res.status(400).json({ error: 'Payment declined' });
   }
 
-  if (typeof orderId !== 'number' || !Number.isInteger(orderId) || typeof amount !== 'number' || !Number.isInteger(amount)) {
+  if (typeof orderId !== 'number' || !Number.isInteger(orderId) || typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Payment declined' });
   }
 
