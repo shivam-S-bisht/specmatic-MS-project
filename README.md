@@ -120,7 +120,8 @@ docker compose up specmatic-test --build --abort-on-container-exit
   2. Payment Service Contract Tests (100% Coverage)
   3. Order Service Contract Tests (100% Coverage, automatic Inventory/Payment/Kafka mocking)
   4. Shipping Service Contract Tests (100% Coverage, automatic Kafka event injection)
-  5. Arazzo Integration Workflow Tests (100% Workflow Coverage: `placeOrder` ➡️ `getOrder` ➡️ `cancelOrder`)
+  5. Notification Service Contract Tests (Consumer-only isolated contract testing via OPERATION-ID filter)
+  6. Arazzo Integration Workflow Tests (100% Workflow Coverage: `placeOrder` ➡️ `getOrder` ➡️ `cancelOrder`)
 
 ### 2. Run Specmatic Studio Web UI + Microservices
 ```bash

@@ -244,7 +244,13 @@ cd /usr/src/app/shipping-service
 specmatic test
 
 echo "========================================="
-echo "5. Running Arazzo Integration Workflow Tests"
+echo "5. Running Notification Service Contract Tests"
+echo "========================================="
+cd /usr/src/app/notification-service
+specmatic test --filter "OPERATION-ID=subscribeOrderCreated"
+
+echo "========================================="
+echo "6. Running Arazzo Integration Workflow Tests"
 echo "========================================="
 # Delete events-api.yaml and service configs completely from workspace right before the test
 rm -f "$EVENTS_API_PATH"
