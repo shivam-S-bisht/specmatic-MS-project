@@ -78,6 +78,7 @@ components:
           type: integer
         amount:
           type: integer
+          minimum: 1
         cardNumber:
           type: string
         cardExpiry:
@@ -101,6 +102,7 @@ components:
           type: integer
         amount:
           type: integer
+          minimum: 1
         bankAccountNumber:
           type: string
         bankRoutingNumber:
