@@ -42,6 +42,10 @@ echo "========================================="
 cd /usr/src/app/order-service
 specmatic test
 
+# Wait for Kafka consumer group rebalance and message propagation to Shipping Service
+echo "Waiting 15 seconds for Kafka event propagation..."
+sleep 15
+
 echo "========================================="
 echo "4. Running Shipping Service Contract Tests"
 echo "========================================="

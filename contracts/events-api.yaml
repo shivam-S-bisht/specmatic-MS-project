@@ -16,6 +16,7 @@ channels:
         $ref: "#/components/messages/OrderCreated"
 operations:
   publishOrderCreated:
+    operationId: publishOrderCreated
     description: Publishes an event when a new order is confirmed
     action: send
     channel:
@@ -23,6 +24,7 @@ operations:
     messages:
       - $ref: "#/channels/orderEvents/messages/orderCreated"
   subscribeOrderCreated:
+    operationId: subscribeOrderCreated
     description: Subscribes to order updates to trigger shipping and notifications
     action: receive
     channel:
