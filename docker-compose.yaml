@@ -154,28 +154,3 @@ services:
       shipping-service:
         condition: service_healthy
 
-  studio:
-    image: specmatic/enterprise:latest
-    container_name: my-ms-studio
-    profiles: ["studio"]
-    command: ["studio"]
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-      - "9002:9002"
-    volumes:
-      - .:/usr/src/app
-      - ./license.txt:/specmatic/specmatic-license.txt:ro
-    environment:
-      SPECMATIC_LICENSE_PATH: /specmatic/specmatic-license.txt
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-      KAFKA_PROPERTIES: |
-        advertised.listeners=PLAINTEXT://kafka:9092
-        listeners=PLAINTEXT://0.0.0.0:9092
-        listener.security.protocol.map=PLAINTEXT:PLAINTEXT
-        inter.broker.listener.name=PLAINTEXT
-    depends_on:
-      order-service:
-        condition: service_healthy
-      shipping-service:
-        condition: service_healthy

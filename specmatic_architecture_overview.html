@@ -574,27 +574,6 @@
         <div class="code-block">specmatic test place-order.arazzo.yaml</div>
       </div>
 
-      <!-- 9. Specmatic Studio -->
-      <div class="feature-card">
-        <div>
-          <div class="feature-header">
-            <div class="feature-icon icon-9">🎨</div>
-            <div class="feature-title">9. Specmatic Studio Workspace</div>
-          </div>
-          <div class="feature-section">
-            <div class="section-label">📌 What We Implemented</div>
-            <div class="what-box">
-              Configured Docker Studio profile on port 9000 with interactive web navigation and workflow canvas authoring.
-            </div>
-            <div class="section-label">💡 Why We Used It</div>
-            <div class="why-box">
-              Gives developers and QA engineers a visual UI to inspect contracts, trigger tests against live services, and drag-and-drop endpoints onto an Arazzo canvas.
-            </div>
-          </div>
-        </div>
-        <div class="code-block">http://localhost:9000/_specmatic/studio</div>
-      </div>
-
     </div>
 
     <!-- COMMANDS & LAB IMPLEMENTATION GUIDE -->
@@ -609,10 +588,7 @@
           docker compose up specmatic-test --build --abort-on-container-exit
         </div>
 
-        <div class="code-block" style="margin-bottom: 12px; font-size: 0.85rem;">
-          <span style="color: #6ee7b7;"># Run Microservices + Specmatic Studio Web Interface</span><br>
-          docker compose --profile studio up order-service inventory-service payment-service shipping-service notification-service studio
-        </div>
+
 
         <div class="code-block" style="font-size: 0.85rem;">
           <span style="color: #6ee7b7;"># Clean Up Docker Containers & Networks</span><br>
@@ -696,19 +672,6 @@
         <div class="code-block">File: contracts/order-api.yaml</div>
       </div>
 
-      <div class="feature-card">
-        <div>
-          <div class="feature-header">
-            <div class="feature-icon icon-9">🖥️</div>
-            <div class="feature-title">MCP Auto-Test / Studio Lab</div>
-          </div>
-          <div class="what-box">
-            <b>Lab Repository:</b> <code>mcp-auto-test</code><br>
-            <b>Implementation:</b> Integrated Specmatic Studio container profile on port 9000, enabling visual spec exploration and drag-and-drop workflow authoring.
-          </div>
-        </div>
-        <div class="code-block">File: docker-compose.yaml (studio)</div>
-      </div>
 
       <div class="feature-card">
         <div>
@@ -805,33 +768,10 @@
         </div>
       </div>
 
-      <div class="feature-card" style="border-top: 4px solid var(--accent-blue);">
-        <div>
-          <div class="feature-header">
-            <div class="feature-icon icon-9">🖥️</div>
-            <div class="feature-title">Specmatic Studio Workspace</div>
-          </div>
-          <div class="what-box">
-            <b>What it does:</b> Provides a visual web UI to explore OpenAPI/AsyncAPI contracts, trigger tests interactively, and drag-and-drop endpoints onto an Arazzo canvas.
-          </div>
-          <div class="why-box">
-            <b>How it improves testing:</b> Lowers the barrier to entry. Empowers developers, QA engineers, and product managers to visually author, debug, and review integration workflows without writing manual YAML.
-          </div>
-        </div>
-      </div>
+
 
     </div>
 
-    <!-- FOOTER CALLOUT -->
-    <div class="footer-callout">
-      <div class="footer-text">
-        <h3>🚀 Ready to Explore Specmatic Studio?</h3>
-        <p>Specmatic Studio is running! Open the dashboard to visually interact with your contracts and workflows.</p>
-      </div>
-      <a href="http://localhost:9000/_specmatic/studio" target="_blank" class="btn">
-        Open Specmatic Studio ↗
-      </a>
-    </div>
   </div>
 
 </body>
