@@ -1,0 +1,25 @@
+name: Specmatic Contract Testing CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  contract-testing:
+    name: Run Specmatic Contract & Workflow Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Start Docker Compose Environment and Run Tests
+        run: |
+          docker compose up specmatic-test --build --abort-on-container-exit
+
+      - name: Stop and Clean Up Containers
+        if: always()
+        run: |
+          docker compose down -v
