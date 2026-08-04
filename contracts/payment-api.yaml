@@ -2,10 +2,15 @@ openapi: 3.0.1
 info:
   title: Payment Service API
   version: 1.0.0
+servers:
+  - url: http://payment-service:3002
 paths:
   /payments:
     post:
       summary: Charge amount for order
+      operationId: chargePayment
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -59,7 +64,18 @@ paths:
                 BAD_REQUEST:
                   value:
                     error: "Payment declined"
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Service-to-service bearer token required to charge a payment
   schemas:
     CardPaymentRequest:
       type: object

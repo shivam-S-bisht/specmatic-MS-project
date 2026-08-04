@@ -104,6 +104,8 @@ paths:
     delete:
       summary: Cancel or delete an order
       operationId: cancelOrder
+      security:
+        - apiKeyAuth: []
       parameters:
         - name: id
           in: path
@@ -115,20 +117,6 @@ paths:
               value: 1
             NOT_FOUND:
               value: 999
-            UNAUTHORIZED:
-              value: 1
-        - name: X-API-Key
-          in: header
-          required: true
-          schema:
-            type: string
-          examples:
-            ORDER_DETAILS:
-              value: "APIKEY1234"
-            NOT_FOUND:
-              value: "APIKEY1234"
-            UNAUTHORIZED:
-              value: "INVALID_KEY"
       responses:
         '204':
           description: Order deleted successfully
@@ -148,10 +136,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                UNAUTHORIZED:
-                  value:
-                    error: "Unauthorized API key"
         '404':
           description: Order not found
           content:
@@ -163,6 +147,12 @@ paths:
                   value:
                     error: "Order not found"
 components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key required to cancel an order
   schemas:
     Order:
       type: object

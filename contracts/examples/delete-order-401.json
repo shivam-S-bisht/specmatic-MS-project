@@ -1,0 +1,19 @@
+{
+  "_comment": "Negative security example. A deliberately wrong API key must be rejected with 401. The invalid value is not a secret, so it is safe to check in; the valid key is injected by Specmatic from the ORDER_API_KEY environment variable.",
+  "http-request": {
+    "path": "/orders/1",
+    "method": "DELETE",
+    "headers": {
+      "X-API-Key": "INVALID_KEY"
+    }
+  },
+  "http-response": {
+    "status": 401,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "error": "Unauthorized API key"
+    }
+  }
+}
