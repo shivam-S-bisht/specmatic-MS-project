@@ -99,7 +99,7 @@ workflows:
             in: path
             value: '$steps.placeOrder.outputs.orderId'
         successCriteria:
-          - condition: '$statusCode == 200'
+          - condition: '$statusCode == 201'
 
       - stepId: cancelOrder
         description: Cancellation, authenticated by the apiKeyAuth scheme
