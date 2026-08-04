@@ -7,7 +7,7 @@ servers:
   localKafka:
     host: kafka:9092
     protocol: kafka
-    description: Development Kafka Broker
+    description: Development Kafka broker
 channels:
   orderEvents:
     address: order-events
@@ -16,7 +16,6 @@ channels:
         $ref: "#/components/messages/OrderCreated"
 operations:
   publishOrderCreated:
-    operationId: publishOrderCreated
     description: Publishes an event when a new order is confirmed
     action: send
     channel:
@@ -24,7 +23,6 @@ operations:
     messages:
       - $ref: "#/channels/orderEvents/messages/orderCreated"
   subscribeOrderCreated:
-    operationId: subscribeOrderCreated
     description: Subscribes to order updates to trigger shipping and notifications
     action: receive
     channel:
@@ -37,6 +35,9 @@ components:
       name: OrderCreated
       title: Order Created Event
       contentType: application/json
+      correlationId:
+        description: The id of the order this event was raised for
+        location: '$message.payload#/orderId'
       payload:
         type: object
         required:

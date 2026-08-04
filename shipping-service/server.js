@@ -21,9 +21,9 @@ const kafka = new Kafka({
 });
 const consumer = kafka.consumer({ groupId: 'shipping-group' });
 
+let consuming = false;
 async function startConsumer() {
-  let attempts = 15;
-  while (attempts > 0) {
+  while (!consuming) {
     try {
       console.log(`Shipping Service connecting to Kafka at ${KAFKA_BROKER}...`);
       await consumer.connect();
@@ -48,10 +48,9 @@ async function startConsumer() {
         }
       });
       console.log('Shipping Service Kafka Consumer is running!');
-      break;
+      consuming = true;
     } catch (err) {
       console.error('Failed to connect Kafka consumer:', err.message);
-      attempts--;
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }
