@@ -29,7 +29,7 @@ app.get('/swagger.json', (req, res) => {
 app.get('/items/:id', (req, res) => {
   const idVal = parseInt(req.params.id);
   if (isNaN(idVal)) {
-    return res.status(400).json({ error: 'Invalid ID format' });
+    return res.status(200).json({ error: 'Invalid ID format' });
   }
 
   const item = items[idVal];
