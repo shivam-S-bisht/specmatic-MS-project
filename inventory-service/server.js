@@ -65,3 +65,4 @@ app.post('/items/reserve', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Inventory Service running on port ${PORT}`);
 });
+// OpenAPI Fixed
