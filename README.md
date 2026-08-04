@@ -27,7 +27,7 @@ A clean run produces:
 | :--- | :--- |
 | OpenAPI contract tests | 111 tests, 100% API coverage |
 | AsyncAPI contract test | 1 test |
-| Arazzo workflows | 4 workflows, 15 steps, 100% coverage |
+| Arazzo workflows | 5 workflows, 21 steps, 100% coverage |
 
 Reports land in `build/reports/specmatic/`:
 
@@ -130,14 +130,19 @@ so every service the suite exercises is listed in its `depends_on`.
 - **Dictionary-driven generation** — domain values for the Inventory mock.
 - **Externalised examples** — `contracts/examples/` supplies the 401 cases for
   `DELETE /orders/{id}` and `POST /payments`, without committing a real credential.
+- **Mock examples** — `contracts/mock-examples/` makes the Inventory and Payment
+  mocks fail on demand, keyed on item id. Order Service only ever sends valid
+  requests, so a correct mock has no reason to answer 4xx and its three
+  `if (!response.ok)` branches would otherwise never execute.
 - **Overlay** — narrows the async test to the consumer side without editing the
   checked-in spec.
 - **Response-to-request chaining** (`workflow.ids`) — config-driven: the orderId
   from `POST /orders` is threaded into the later `GET` and `DELETE`.
-- **Arazzo 1.1 workflows** — `workflows/place-order.arazzo.yaml` holds four
-  workflows covering the client-facing path, the internal hops Order Service
-  makes, the cancellation auth sequence, and an inventory failure translating
-  into a 400. Referenced from `specmatic.yaml`, not the command line.
+- **Arazzo 1.1 workflows** — `workflows/place-order.arazzo.yaml` holds five
+  workflows: the client-facing path, the internal hops Order Service makes, the
+  cancellation auth sequence, every downstream failure surfacing as a 400, and
+  an event placed on the channel becoming a shipment. Referenced from
+  `specmatic.yaml`, not the command line.
 - **Governance gates** — `minCoveragePercentage: 100`,
   `maxMissedOperationsInSpec: 0`, `enforce: true`.
 - **HTML + CTRF reports**, uploaded as a CI artifact.
