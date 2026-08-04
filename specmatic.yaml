@@ -31,7 +31,7 @@ systemUnderTest:
                 path: shipping-api.yaml
             - spec:
                 id: orderEventsSpec
-                path: events-api.yaml
+                path: events-api-consumer.yaml
       - definition:
           source:
             $ref: "#/components/sources/workflows"
@@ -76,10 +76,6 @@ systemUnderTest:
         servers:
           - host: ${KAFKA_BROKER:kafka:9092}
             protocol: kafka
-        specs:
-          - spec:
-              id: orderEventsSpec
-              overlayFilePath: ./contracts/events-api-consumer.overlay.yaml
     data:
       examples:
         - directories:

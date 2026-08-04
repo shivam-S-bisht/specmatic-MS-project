@@ -27,7 +27,7 @@ A clean run produces:
 | :--- | :--- |
 | OpenAPI contract tests | 111 tests, 100% API coverage |
 | AsyncAPI contract test | 1 test |
-| Arazzo workflows | 5 workflows, 21 steps, 100% coverage |
+| Arazzo workflows | 5 workflows, 22 steps, 100% coverage |
 
 Reports land in `build/reports/specmatic/`:
 
@@ -134,8 +134,10 @@ so every service the suite exercises is listed in its `depends_on`.
   mocks fail on demand, keyed on item id. Order Service only ever sends valid
   requests, so a correct mock has no reason to answer 4xx and its three
   `if (!response.ok)` branches would otherwise never execute.
-- **Overlay** — narrows the async test to the consumer side without editing the
-  checked-in spec.
+- **Consumer-side spec view** — `contracts/events-api-consumer.yaml` scopes the
+  standalone async test to the receive side, since nothing in a plain contract
+  run triggers a publish. Arazzo reads the full `events-api.yaml`, so the
+  published event is still asserted.
 - **Response-to-request chaining** (`workflow.ids`) — config-driven: the orderId
   from `POST /orders` is threaded into the later `GET` and `DELETE`.
 - **Arazzo 1.1 workflows** — `workflows/place-order.arazzo.yaml` holds five
