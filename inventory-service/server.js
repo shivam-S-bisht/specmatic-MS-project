@@ -11,7 +11,7 @@ const SWAGGER_PATH = process.env.SWAGGER_PATH || path.join(__dirname, '..', 'con
 
 // In-memory stock DB
 const items = {
-  1: { id: 1, name: 'Laptop', price: 1200, stock: 50 }
+  1: { id: 1, name: 'Laptop', item_price: 1200, stock: 50 }
 };
 
 // Serve swagger spec
