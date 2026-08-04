@@ -193,7 +193,7 @@ app.post('/orders', async (req, res) => {
           value: JSON.stringify({
             orderId,
             itemId,
-            quantity,
+            qty: quantity,
             price: itemPrice
           })
         }
