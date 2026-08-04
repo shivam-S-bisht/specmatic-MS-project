@@ -37,7 +37,6 @@ systemUnderTest:
             $ref: "#/components/sources/workflows"
           specs:
             - spec:
-                id: orderWorkflowSpec
                 path: place-order.arazzo.yaml
     runOptions:
       openapi:
