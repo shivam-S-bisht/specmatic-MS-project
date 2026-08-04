@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   kafka:
     image: apache/kafka:latest
-    container_name: my-ms-kafka
+    container_name: kafka
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -17,141 +15,101 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
-      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
     ports:
       - "9092:9092"
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1" ]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 2s
       timeout: 5s
-      retries: 15
-      start_period: 2s
-
-  kafka-init:
-    image: apache/kafka:latest
-    container_name: my-ms-kafka-init
-    depends_on:
-      kafka:
-        condition: service_healthy
-    entrypoint: [ "/bin/sh", "-c", "sh /specmatic/create-topics.sh" ]
-    volumes:
-      - ./create-topics.sh:/specmatic/create-topics.sh
-    restart: "no"
+      retries: 30
+      start_period: 3s
 
   inventory-service:
     container_name: inventory-service
-    build:
-      context: ./inventory-service
+    build: ./inventory-service
     ports:
       - "13001:3001"
-    environment:
-      PORT: 3001
-      SWAGGER_PATH: /usr/src/app/contracts/inventory-api.yaml
     volumes:
-      - ./contracts:/usr/src/app/contracts
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/swagger.json', (res) => { if (res.statusCode === 200) process.exit(0); else process.exit(1); })"]
-      interval: 2s
-      timeout: 1s
-      retries: 30
-      start_period: 2s
+      - ./contracts:/usr/src/contracts:ro
 
   payment-service:
     container_name: payment-service
-    build:
-      context: ./payment-service
+    build: ./payment-service
     ports:
       - "13002:3002"
     environment:
-      PORT: 3002
-      SWAGGER_PATH: /usr/src/app/contracts/payment-api.yaml
+      PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN}
     volumes:
-      - ./contracts:/usr/src/app/contracts
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/swagger.json', (res) => { if (res.statusCode === 200) process.exit(0); else process.exit(1); })"]
-      interval: 2s
-      timeout: 1s
-      retries: 30
-      start_period: 2s
+      - ./contracts:/usr/src/contracts:ro
 
   order-service:
     container_name: order-service
-    build:
-      context: ./order-service
+    build: ./order-service
     ports:
       - "13000:3000"
     environment:
-      PORT: 3000
-      INVENTORY_SERVICE_URL: http://specmatic-test:9001
-      PAYMENT_SERVICE_URL: http://specmatic-test:9002
+      INVENTORY_SERVICE_URL: http://specmatic-tests:9001
+      PAYMENT_SERVICE_URL: http://specmatic-tests:9002
       KAFKA_BROKER: kafka:9092
-      SWAGGER_PATH: /usr/src/app/contracts/order-api.yaml
+      ORDER_API_KEY: ${ORDER_API_KEY}
+      PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN}
     volumes:
-      - ./contracts:/usr/src/app/contracts
+      - ./contracts:/usr/src/contracts:ro
     depends_on:
-      kafka-init:
-        condition: service_completed_successfully
-      inventory-service:
+      kafka:
         condition: service_healthy
-      payment-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/swagger.json', (res) => { if (res.statusCode === 200) process.exit(0); else process.exit(1); })"]
-      interval: 2s
-      timeout: 1s
-      retries: 30
-      start_period: 2s
 
   shipping-service:
     container_name: shipping-service
-    build:
-      context: ./shipping-service
+    build: ./shipping-service
     ports:
       - "13003:3003"
     environment:
-      PORT: 3003
       KAFKA_BROKER: kafka:9092
-      SWAGGER_PATH: /usr/src/app/contracts/shipping-api.yaml
     volumes:
-      - ./contracts:/usr/src/app/contracts
+      - ./contracts:/usr/src/contracts:ro
     depends_on:
-      kafka-init:
-        condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/swagger.json', (res) => { if (res.statusCode === 200) process.exit(0); else process.exit(1); })"]
-      interval: 2s
-      timeout: 1s
-      retries: 30
-      start_period: 2s
+      kafka:
+        condition: service_healthy
 
   notification-service:
     container_name: notification-service
-    build:
-      context: ./notification-service
+    build: ./notification-service
     environment:
       KAFKA_BROKER: kafka:9092
     depends_on:
-      kafka-init:
-        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
 
-  specmatic-test:
+  specmatic-tests:
     image: specmatic/enterprise:latest
-    container_name: my-ms-specmatic-test
-    hostname: specmatic-test
-    entrypoint: ["sh", "-lc"]
-    command: ["sh /usr/src/app/run-tests.sh"]
+    container_name: specmatic-tests
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -e
+        sh workflows/arazzo-inputs.sh > workflows/place-order.arazzo_input.json
+        specmatic run-suite
     volumes:
       - .:/usr/src/app
       - ./license.txt:/specmatic/specmatic-license.txt:ro
     environment:
-      SPECMATIC_LICENSE_PATH: /specmatic/specmatic-license.txt
-
+      ORDER_API_KEY: ${ORDER_API_KEY}
+      PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN}
     ports:
       - "9001:9001"
       - "9002:9002"
     depends_on:
+      kafka:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
       order-service:
         condition: service_healthy
       shipping-service:
         condition: service_healthy
-
+      notification-service:
+        condition: service_healthy
