@@ -1,0 +1,28 @@
+{
+  "_comment": "Negative security example. A deliberately wrong bearer token must be rejected with 401. The valid token is injected by Specmatic from the PAYMENT_SERVICE_TOKEN environment variable.",
+  "http-request": {
+    "path": "/payments",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer INVALID_TOKEN"
+    },
+    "body": {
+      "paymentType": "card",
+      "orderId": 1,
+      "amount": 2400,
+      "cardNumber": "4111-1111-1111-1111",
+      "cardExpiry": "12/28",
+      "cardCvv": "123"
+    }
+  },
+  "http-response": {
+    "status": 401,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "error": "Unauthorized"
+    }
+  }
+}

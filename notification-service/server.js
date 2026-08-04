@@ -1,6 +1,8 @@
+const fs = require('fs');
 const { Kafka } = require('kafkajs');
 
 const KAFKA_BROKER = process.env.KAFKA_BROKER || 'kafka:9092';
+const READY_FILE = process.env.READY_FILE || '/tmp/ready';
 
 // Initialize Kafka Consumer
 const kafka = new Kafka({
@@ -9,9 +11,9 @@ const kafka = new Kafka({
 });
 const consumer = kafka.consumer({ groupId: 'notification-group' });
 
+let consuming = false;
 async function startConsumer() {
-  let attempts = 15;
-  while (attempts > 0) {
+  while (!consuming) {
     try {
       console.log(`Notification Service connecting to Kafka at ${KAFKA_BROKER}...`);
       await consumer.connect();
@@ -31,10 +33,10 @@ async function startConsumer() {
         }
       });
       console.log('Notification Service Kafka Consumer is running!');
-      break;
+      fs.writeFileSync(READY_FILE, 'ready');
+      consuming = true;
     } catch (err) {
       console.error('Failed to connect Kafka consumer:', err.message);
-      attempts--;
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }

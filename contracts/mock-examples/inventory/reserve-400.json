@@ -1,0 +1,9 @@
+{
+  "_comment": "Item 997 looks up fine but cannot be reserved, so Order Service fails at the reserve step rather than the price lookup.",
+  "http-request": { "path": "/items/reserve", "method": "POST", "body": { "id": 997, "quantity": 1 } },
+  "http-response": {
+    "status": 400,
+    "headers": { "Content-Type": "application/json" },
+    "body": { "error": "Out of stock or invalid request" }
+  }
+}

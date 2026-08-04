@@ -1,0 +1,154 @@
+version: 3
+
+components:
+  sources:
+    contracts:
+      filesystem:
+        directory: contracts
+    workflows:
+      filesystem:
+        directory: workflows
+
+systemUnderTest:
+  service:
+    description: Order, Inventory, Payment, Shipping and Notification microservices
+    definitions:
+      - definition:
+          source:
+            $ref: "#/components/sources/contracts"
+          specs:
+            - spec:
+                id: inventoryApiSpec
+                path: inventory-api.yaml
+            - spec:
+                id: paymentApiSpec
+                path: payment-api.yaml
+            - spec:
+                id: orderApiSpec
+                path: order-api.yaml
+            - spec:
+                id: shippingApiSpec
+                path: shipping-api.yaml
+            - spec:
+                id: orderEventsSpec
+                path: events-api.yaml
+      - definition:
+          source:
+            $ref: "#/components/sources/workflows"
+          specs:
+            - spec:
+                id: orderWorkflowSpec
+                path: place-order.arazzo.yaml
+    runOptions:
+      openapi:
+        type: test
+        filter: "PATH!='/swagger.json'"
+        workflow:
+          ids:
+            "POST /orders -> 201":
+              extract: "BODY.orderId"
+            "GET /orders/(id:number) -> 200":
+              use: "PATH.id"
+            "DELETE /orders/(id:number) -> 204":
+              use: "PATH.id"
+        specs:
+          - spec:
+              id: inventoryApiSpec
+              baseUrl: ${INVENTORY_BASE_URL:http://inventory-service:3001}
+          - spec:
+              id: paymentApiSpec
+              baseUrl: ${PAYMENT_BASE_URL:http://payment-service:3002}
+              securitySchemes:
+                bearerAuth:
+                  type: bearer
+                  token: ${PAYMENT_SERVICE_TOKEN:unset}
+          - spec:
+              id: orderApiSpec
+              baseUrl: ${ORDER_BASE_URL:http://order-service:3000}
+              securitySchemes:
+                apiKeyAuth:
+                  type: apiKey
+                  token: ${ORDER_API_KEY:unset}
+          - spec:
+              id: shippingApiSpec
+              baseUrl: ${SHIPPING_BASE_URL:http://shipping-service:3003}
+      asyncapi:
+        type: test
+        servers:
+          - host: ${KAFKA_BROKER:kafka:9092}
+            protocol: kafka
+        specs:
+          - spec:
+              id: orderEventsSpec
+              overlayFilePath: ./contracts/events-api-consumer.overlay.yaml
+    data:
+      examples:
+        - directories:
+            - ./contracts/examples
+    settings:
+      schemaResiliencyTests: all
+
+dependencies:
+  services:
+    - service:
+        description: Inventory Service mock consumed by Order Service
+        definitions:
+          - definition:
+              source:
+                $ref: "#/components/sources/contracts"
+              specs:
+                - inventory-api.yaml
+        runOptions:
+          openapi:
+            type: mock
+            baseUrl: ${INVENTORY_MOCK_URL:http://specmatic-tests:9001}
+        data:
+          dictionary:
+            path: ./contracts/dictionary.yaml
+          examples:
+            - directories:
+                - ./contracts/mock-examples/inventory
+    - service:
+        description: Payment Service mock consumed by Order Service
+        definitions:
+          - definition:
+              source:
+                $ref: "#/components/sources/contracts"
+              specs:
+                - payment-api.yaml
+        runOptions:
+          openapi:
+            type: mock
+            baseUrl: ${PAYMENT_MOCK_URL:http://specmatic-tests:9002}
+        data:
+          examples:
+            - directories:
+                - ./contracts/mock-examples/payment
+    - service:
+        description: Kafka broker and order-events mock consumed by every service
+        definitions:
+          - definition:
+              source:
+                $ref: "#/components/sources/contracts"
+              specs:
+                - events-api.yaml
+        runOptions:
+          asyncapi:
+            type: mock
+            servers:
+              - host: ${KAFKA_BROKER:kafka:9092}
+                protocol: kafka
+
+specmatic:
+  governance:
+    report:
+      formats:
+        - html
+        - ctrf
+      outputDirectory: ${SPECMATIC_REPORT_DIR:build/reports/specmatic}
+    successCriteria:
+      minCoveragePercentage: 100
+      maxMissedOperationsInSpec: 0
+      enforce: true
+  license:
+    path: ${SPECMATIC_LICENSE_PATH:/specmatic/specmatic-license.txt}

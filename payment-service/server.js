@@ -9,6 +9,12 @@ app.use(express.json());
 const PORT = process.env.PORT || 3002;
 const SWAGGER_PATH = process.env.SWAGGER_PATH || path.join(__dirname, '..', 'contracts', 'payment-api.yaml');
 
+const PAYMENT_SERVICE_TOKEN = process.env.PAYMENT_SERVICE_TOKEN;
+if (!PAYMENT_SERVICE_TOKEN) {
+  console.error('PAYMENT_SERVICE_TOKEN is not set. Refusing to start. See .env.example.');
+  process.exit(1);
+}
+
 // Serve swagger spec
 app.get('/swagger.json', (req, res) => {
   try {
@@ -22,6 +28,11 @@ app.get('/swagger.json', (req, res) => {
 
 // POST /payments
 app.post('/payments', (req, res) => {
+  const authHeader = req.header('Authorization') || '';
+  if (authHeader !== `Bearer ${PAYMENT_SERVICE_TOKEN}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { paymentType, orderId, amount } = req.body;
 
   // Validate fields for contract-resiliency compliance

@@ -1,0 +1,11 @@
+{
+  "_comment": "A charge of 222 is rejected as unauthorised, exercising Order Service's handling of a payment gateway auth failure.",
+  "partial": {
+    "http-request": { "path": "/payments", "method": "POST", "body": { "amount": 222 } },
+    "http-response": {
+      "status": 401,
+      "headers": { "Content-Type": "application/json" },
+      "body": { "error": "Unauthorized" }
+    }
+  }
+}

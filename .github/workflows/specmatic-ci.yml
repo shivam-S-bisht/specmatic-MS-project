@@ -13,15 +13,31 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Create License File from Secret
+      - name: Create license file from secret
+        env:
+          SPECMATIC_LICENSE: ${{ secrets.SPECMATIC_LICENSE }}
         run: |
-          echo "${{ secrets.SPECMATIC_LICENSE }}" > license.txt
-
-      - name: Start Docker Compose Environment and Run Tests
+          echo "$SPECMATIC_LICENSE" > license.txt
+      - name: Create .env from secrets
+        env:
+          ORDER_API_KEY: ${{ secrets.ORDER_API_KEY }}
+          PAYMENT_SERVICE_TOKEN: ${{ secrets.PAYMENT_SERVICE_TOKEN }}
         run: |
-          docker compose up specmatic-test --build --abort-on-container-exit
+          echo "ORDER_API_KEY=$ORDER_API_KEY" >> .env
+          echo "PAYMENT_SERVICE_TOKEN=$PAYMENT_SERVICE_TOKEN" >> .env
 
-      - name: Stop and Clean Up Containers
+      # Exactly the same command developers run locally.
+      - name: Run contract & workflow tests
+        run: docker compose up specmatic-tests --build --abort-on-container-exit
+
+      - name: Upload Specmatic reports
         if: always()
-        run: |
-          docker compose down -v
+        uses: actions/upload-artifact@v4
+        with:
+          name: specmatic-reports
+          path: build/reports/specmatic
+          if-no-files-found: warn
+
+      - name: Stop and clean up containers
+        if: always()
+        run: docker compose down -v --remove-orphans

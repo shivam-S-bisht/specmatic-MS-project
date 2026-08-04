@@ -2,10 +2,13 @@ openapi: 3.0.1
 info:
   title: Shipping Service API
   version: 1.0.0
+servers:
+  - url: http://shipping-service:3003
 paths:
   /shipments/{orderId}:
     get:
       summary: Retrieve shipment details by order ID
+      operationId: getShipment
       parameters:
         - name: orderId
           in: path

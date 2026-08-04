@@ -1,0 +1,9 @@
+{
+  "_comment": "Item 998 makes the Inventory mock answer 400. Order Service must translate an inventory failure into an order 400 rather than a 500.",
+  "http-request": { "path": "/items/998", "method": "GET" },
+  "http-response": {
+    "status": 400,
+    "headers": { "Content-Type": "application/json" },
+    "body": { "error": "Invalid ID format" }
+  }
+}

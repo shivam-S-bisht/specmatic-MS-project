@@ -1,0 +1,356 @@
+arazzo: '1.1.0'
+info:
+  title: Order Fulfilment - Whole Application Request Flow
+  version: 1.0.0
+  description: |
+    Every request and response in this system, expressed as Arazzo workflows.
+sourceDescriptions:
+  - name: InventoryApi
+    type: openapi
+    url: ../contracts/inventory-api.yaml
+  - name: OrderApi
+    type: openapi
+    url: ../contracts/order-api.yaml
+  - name: PaymentApi
+    type: openapi
+    url: ../contracts/payment-api.yaml
+  - name: ShippingApi
+    type: openapi
+    url: ../contracts/shipping-api.yaml
+  - name: OrderEvents
+    type: asyncapi
+    url: ../contracts/events-api.yaml
+
+workflows:
+  # ---------------------------------------------------------------------------
+  # 1. The client-facing path, end to end.
+  # ---------------------------------------------------------------------------
+  - workflowId: OrderFulfilmentEndToEnd
+    summary: A customer order from catalogue lookup to cancellation
+    inputs:
+      type: object
+      required: [orderApiKey]
+      properties:
+        orderApiKey:
+          type: string
+          description: X-API-Key value for the apiKeyAuth scheme
+    steps:
+      - stepId: browseCatalogue
+        description: Inventory Service returns the item the rest of the flow is priced from
+        operationId: '$sourceDescriptions.InventoryApi.getItem'
+        parameters:
+          - name: id
+            in: path
+            value: 1
+        successCriteria:
+          - condition: '$statusCode == 200'
+        outputs:
+          itemId: '$response.body#/id'
+          unitPrice: '$response.body#/price'
+
+      - stepId: placeOrder
+        description: Order Service reserves stock, charges payment and publishes OrderCreated
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: '$steps.browseCatalogue.outputs.itemId'
+            quantity: 2
+        successCriteria:
+          - condition: '$statusCode == 201'
+        outputs:
+          orderId: '$response.body#/orderId'
+          quantity: '$response.body#/quantity'
+
+      - stepId: trackShipment
+        description: Shipping Service turned the event into a shipment
+        operationId: '$sourceDescriptions.ShippingApi.getShipment'
+        parameters:
+          - name: orderId
+            in: path
+            value: '$steps.placeOrder.outputs.orderId'
+        successCriteria:
+          - condition: '$statusCode == 200'
+        onFailure:
+          - name: waitForKafkaConsumer
+            type: retry
+            retryAfter: 1
+            retryLimit: 10
+            criteria:
+              - condition: '$statusCode == 404'
+        outputs:
+          trackingNumber: '$response.body#/trackingNumber'
+
+      - stepId: readBackOrder
+        description: The order is readable and confirmed
+        operationId: '$sourceDescriptions.OrderApi.getOrder'
+        parameters:
+          - name: id
+            in: path
+            value: '$steps.placeOrder.outputs.orderId'
+        successCriteria:
+          - condition: '$statusCode == 200'
+
+      - stepId: cancelOrder
+        description: Cancellation, authenticated by the apiKeyAuth scheme
+        operationId: '$sourceDescriptions.OrderApi.cancelOrder'
+        parameters:
+          - name: id
+            in: path
+            value: '$steps.placeOrder.outputs.orderId'
+          - name: X-API-Key
+            in: header
+            value: '$inputs.orderApiKey'
+        successCriteria:
+          - condition: '$statusCode == 204'
+
+      - stepId: confirmOrderGone
+        description: The cancelled order is no longer retrievable
+        operationId: '$sourceDescriptions.OrderApi.getOrder'
+        parameters:
+          - name: id
+            in: path
+            value: '$steps.placeOrder.outputs.orderId'
+        successCriteria:
+          - condition: '$statusCode == 404'
+
+  # ---------------------------------------------------------------------------
+  # 2. The three internal hops, asserted against the real downstream services.
+  # ---------------------------------------------------------------------------
+  - workflowId: DownstreamContractsOfOrderService
+    summary: The Inventory and Payment contracts Order Service depends on
+    inputs:
+      type: object
+      required: [paymentAuthorization]
+      properties:
+        paymentAuthorization:
+          type: string
+          description: Full Authorization header value for the bearerAuth scheme
+    steps:
+      - stepId: lookUpPrice
+        description: Hop 1 - Order Service reads the item price
+        operationId: '$sourceDescriptions.InventoryApi.getItem'
+        parameters:
+          - name: id
+            in: path
+            value: 1
+        successCriteria:
+          - condition: '$statusCode == 200'
+        outputs:
+          itemId: '$response.body#/id'
+          unitPrice: '$response.body#/price'
+
+      - stepId: reserveStock
+        description: Hop 2 - Order Service reserves the stock it is about to sell
+        operationId: '$sourceDescriptions.InventoryApi.reserveStock'
+        requestBody:
+          contentType: application/json
+          payload:
+            id: '$steps.lookUpPrice.outputs.itemId'
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 200'
+
+      - stepId: chargeCard
+        description: Hop 3 - Order Service charges the card
+        operationId: '$sourceDescriptions.PaymentApi.chargePayment'
+        parameters:
+          - name: Authorization
+            in: header
+            value: '$inputs.paymentAuthorization'
+        requestBody:
+          contentType: application/json
+          payload:
+            paymentType: card
+            orderId: 1
+            amount: '$steps.lookUpPrice.outputs.unitPrice'
+            cardNumber: "4111-1111-1111-1111"
+            cardExpiry: "12/28"
+            cardCvv: "123"
+        successCriteria:
+          - condition: '$statusCode == 200'
+
+      - stepId: chargeBankTransfer
+        description: The same contract's bank transfer branch
+        operationId: '$sourceDescriptions.PaymentApi.chargePayment'
+        parameters:
+          - name: Authorization
+            in: header
+            value: '$inputs.paymentAuthorization'
+        requestBody:
+          contentType: application/json
+          payload:
+            paymentType: bank_transfer
+            orderId: 1
+            amount: '$steps.lookUpPrice.outputs.unitPrice'
+            bankAccountNumber: "9876543210"
+            bankRoutingNumber: "ROUT1234"
+            bankAccountHolder: "John Doe"
+        successCriteria:
+          - condition: '$statusCode == 200'
+
+  # ---------------------------------------------------------------------------
+  # 3. The auth sequence. 401-before-204-before-404 is a fact about ordering,
+  #    which a single-endpoint example cannot express.
+  # ---------------------------------------------------------------------------
+  - workflowId: OrderCancellationSecurity
+    summary: A wrong API key is rejected, the right one works, and only once
+    inputs:
+      type: object
+      required: [orderApiKey]
+      properties:
+        orderApiKey:
+          type: string
+          description: X-API-Key value for the apiKeyAuth scheme
+    steps:
+      - stepId: placeOrderToCancel
+        description: An order to attempt cancellation against
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 1
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 201'
+        outputs:
+          orderId: '$response.body#/orderId'
+
+      - stepId: cancelWithWrongKey
+        description: A wrong API key is rejected before the order is even looked up
+        operationId: '$sourceDescriptions.OrderApi.cancelOrder'
+        parameters:
+          - name: id
+            in: path
+            value: '$steps.placeOrderToCancel.outputs.orderId'
+          - name: X-API-Key
+            in: header
+            value: 'INVALID_KEY'
+        successCriteria:
+          - condition: '$statusCode == 401'
+
+      - stepId: cancelWithRightKey
+        description: The correct API key cancels the order
+        operationId: '$sourceDescriptions.OrderApi.cancelOrder'
+        parameters:
+          - name: id
+            in: path
+            value: '$steps.placeOrderToCancel.outputs.orderId'
+          - name: X-API-Key
+            in: header
+            value: '$inputs.orderApiKey'
+        successCriteria:
+          - condition: '$statusCode == 204'
+
+      - stepId: cancelAgain
+        description: Cancelling twice is a 404, not a second 204
+        operationId: '$sourceDescriptions.OrderApi.cancelOrder'
+        parameters:
+          - name: id
+            in: path
+            value: '$steps.placeOrderToCancel.outputs.orderId'
+          - name: X-API-Key
+            in: header
+            value: '$inputs.orderApiKey'
+        successCriteria:
+          - condition: '$statusCode == 404'
+
+  # ---------------------------------------------------------------------------
+  # 4. Cross-service failure translation: Inventory says 404, the client sees
+  #    400. Driven by the inventory mock's ITEM_NOT_FOUND example, so the
+  #    failure is reproducible rather than dependent on real stock levels.
+  # ---------------------------------------------------------------------------
+  - workflowId: OrderRejectedByDownstream
+    summary: Inventory and Payment failures surface as an order 400, not a 500
+    steps:
+      - stepId: itemNotFound
+        description: Inventory cannot find item 999
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 999
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+      - stepId: itemLookupRejected
+        description: Inventory rejects the lookup for item 998 with a 400
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 998
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+      - stepId: stockReservationRejected
+        description: Item 997 is priced fine but cannot be reserved
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 997
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+      - stepId: paymentDeclined
+        description: Item 996 costs 111, which the payment mock declines
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 996
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+      - stepId: paymentUnauthorized
+        description: Item 995 costs 222, which the payment mock rejects as unauthorised
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 995
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+  # ---------------------------------------------------------------------------
+  # 5. The consumer side, driven from the other direction: the workflow puts an
+  #    OrderCreated on the channel itself and asserts Shipping Service acted on
+  #    it. Nothing else exercises the mock's send capability.
+  # ---------------------------------------------------------------------------
+  - workflowId: ShippingConsumesOrderEvent
+    summary: An OrderCreated event on order-events becomes a shipment
+    steps:
+      - stepId: publishOrderCreated
+        description: Put an OrderCreated for order 4242 on the channel
+        operationId: '$sourceDescriptions.OrderEvents.subscribeOrderCreated'
+        action: send
+        requestBody:
+          contentType: application/json
+          payload:
+            orderId: 4242
+            itemId: 1
+            quantity: 2
+            price: 1200
+
+      - stepId: shipmentCreatedFromEvent
+        description: Shipping Service consumed the event and created the shipment
+        operationId: '$sourceDescriptions.ShippingApi.getShipment'
+        parameters:
+          - name: orderId
+            in: path
+            value: 4242
+        successCriteria:
+          - condition: '$statusCode == 200'
+        onFailure:
+          - name: waitForKafkaConsumer
+            type: retry
+            retryAfter: 1
+            retryLimit: 10
+            criteria:
+              - condition: '$statusCode == 404'

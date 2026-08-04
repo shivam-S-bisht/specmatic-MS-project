@@ -13,6 +13,15 @@ const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://payment-s
 const KAFKA_BROKER = process.env.KAFKA_BROKER || 'kafka:9092';
 const SWAGGER_PATH = process.env.SWAGGER_PATH || path.join(__dirname, '..', 'contracts', 'order-api.yaml');
 
+const ORDER_API_KEY = process.env.ORDER_API_KEY;
+const PAYMENT_SERVICE_TOKEN = process.env.PAYMENT_SERVICE_TOKEN;
+for (const [name, value] of Object.entries({ ORDER_API_KEY, PAYMENT_SERVICE_TOKEN })) {
+  if (!value) {
+    console.error(`${name} is not set. Refusing to start. See .env.example.`);
+    process.exit(1);
+  }
+}
+
 // In-memory Order DB
 const orders = {};
 let orderIdCounter = 1;
@@ -26,17 +35,14 @@ const producer = kafka.producer();
 
 let kafkaConnected = false;
 async function connectKafka() {
-  let attempts = 15;
-  while (attempts > 0) {
+  while (!kafkaConnected) {
     try {
       console.log(`Connecting to Kafka at ${KAFKA_BROKER}...`);
       await producer.connect();
       console.log('Connected to Kafka!');
       kafkaConnected = true;
-      break;
     } catch (err) {
       console.error('Failed to connect to Kafka:', err.message);
-      attempts--;
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }
@@ -71,7 +77,7 @@ app.get('/orders/:id', (req, res) => {
 // DELETE /orders/:id
 app.delete('/orders/:id', (req, res) => {
   const apiKey = req.header('X-API-Key');
-  if (!apiKey || apiKey !== 'APIKEY1234') {
+  if (!apiKey || apiKey !== ORDER_API_KEY) {
     return res.status(401).json({ error: 'Unauthorized API key' });
   }
 
@@ -141,7 +147,10 @@ app.post('/orders', async (req, res) => {
     console.log(`Charging ${amount} for order ${orderId} via ${PAYMENT_SERVICE_URL}...`);
     const paymentResponse = await fetch(`${PAYMENT_SERVICE_URL}/payments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${PAYMENT_SERVICE_TOKEN}`
+      },
       body: JSON.stringify({
         paymentType: 'card',
         orderId,
@@ -168,29 +177,31 @@ app.post('/orders', async (req, res) => {
   };
   orders[orderId] = confirmedOrder;
 
-  // 6. Publish OrderCreated event to Kafka
-  if (kafkaConnected) {
-    try {
-      await producer.send({
-        topic: 'order-events',
-        messages: [
-          {
-            key: orderId.toString(),
-            value: JSON.stringify({
-              orderId,
-              itemId,
-              quantity,
-              price: itemPrice
-            })
-          }
-        ]
-      });
-      console.log(`OrderCreated event published for order ${orderId}`);
-    } catch (err) {
-      console.error('Failed to publish order event to Kafka:', err.message);
+  // 6. Publish OrderCreated event to Kafka. Attempted on demand rather than
+  // gated on a startup flag: connect() may still be in flight, and kafkajs
+  // establishes the connection on first send.
+  try {
+    if (!kafkaConnected) {
+      await producer.connect();
+      kafkaConnected = true;
     }
-  } else {
-    console.warn('Kafka broker not connected, skipping event publish');
+    await producer.send({
+      topic: 'order-events',
+      messages: [
+        {
+          key: orderId.toString(),
+          value: JSON.stringify({
+            orderId,
+            itemId,
+            quantity,
+            price: itemPrice
+          })
+        }
+      ]
+    });
+    console.log(`OrderCreated event published for order ${orderId}`);
+  } catch (err) {
+    console.error('Failed to publish order event to Kafka:', err.message);
   }
 
   res.status(201).json(confirmedOrder);
