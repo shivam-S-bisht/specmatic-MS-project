@@ -1,135 +1,143 @@
-# 🚀 Specmatic Multi-Microservices Suite
+# Specmatic Multi-Microservices Suite
 
-An enterprise-grade, distributed microservices project demonstrating comprehensive contract testing, event-driven testing, resiliency mutation, and multi-step workflow automation using **Specmatic** (OpenAPI 3.0, AsyncAPI 3.0, Arazzo 1.0, and Specmatic Studio).
+Five Node.js microservices — order, inventory, payment, shipping, notification —
+contract tested end to end with **Specmatic Enterprise** over OpenAPI 3.0,
+AsyncAPI 3.0 (Kafka) and Arazzo 1.1.
 
----
-
-## 📐 System Architecture & Services
-
-The system consists of **5 Node.js microservices** orchestrating order management, stock reservation, payment processing, shipping allocation, and notification delivery via REST APIs and Apache Kafka event streams:
-
-```
-                          ┌──────────────────────────┐
-                          │   Specmatic Studio UI    │
-                          │   http://localhost:9000  │
-                          └─────────────┬────────────┘
-                                        │
-┌───────────────────┐    REST     ┌─────▼───────────┐    REST     ┌───────────────────┐
-│ Inventory Service ◄─────────────┤  Order Service  ├────────────►│  Payment Service  │
-│    (Port 3001)    │  (Mock:9001)│   (Port 3000)   │ (Mock:9002) │    (Port 3002)    │
-└───────────────────┘             └────────┬────────┘             └───────────────────┘
-                                           │ Publishes OrderCreated Event
-                                           ▼
-                                ┌─────────────────────┐
-                                │ Kafka Event Broker  │
-                                │    (Port 9092)      │
-                                └──────────┬──────────┘
-                                           │
-                       ┌───────────────────┴───────────────────┐
-                       ▼                                       ▼
-             ┌───────────────────┐                   ┌───────────────────┐
-             │ Shipping Service  │                   │Notification Serv. │
-             │    (Port 3003)    │                   │    (Consumer)     │
-             └───────────────────┘                   └───────────────────┘
-```
-
-1. **Order Service (Port 3000):** Orchestrates order creation (`POST /orders`), status retrieval (`GET /orders/{id}`), and order cancellation (`DELETE /orders/{id}`). Connects to Inventory and Payment services and publishes `OrderCreated` events to Kafka.
-2. **Inventory Service (Port 3001):** Manages stock catalog (`GET /items/{id}`) and handles reservations (`POST /items/reserve`).
-3. **Payment Service (Port 3002):** Processes transactions using polymorphic schemas (`CREDIT_CARD` vs `BANK_TRANSFER`).
-4. **Shipping Service (Port 3003):** Consumes `order-events` from Kafka to allocate packages and exposes tracking (`GET /shipments/{orderId}`).
-5. **Notification Service (Consumer):** Listens to Kafka `order-events` and triggers customer confirmation alerts.
-6. **Kafka Broker:** Apache Kafka running in KRaft mode for event propagation.
+One config file (`specmatic.yaml`), one command, identical on a laptop and in CI.
 
 ---
 
-## 🌟 Implemented Specmatic Features & Why We Used Them
+## Quick start
 
-### 1. 📜 OpenAPI (REST) Contract Testing
-* **What We Implemented:** Full OpenAPI 3.0 specifications ([order-api.yaml](contracts/order-api.yaml), [inventory-api.yaml](contracts/inventory-api.yaml), [payment-api.yaml](contracts/payment-api.yaml), [shipping-api.yaml](contracts/shipping-api.yaml)).
-* **Why We Used It:** Guarantees our Express REST endpoints comply 100% with API contracts. Specmatic generates test inputs dynamically and validates real HTTP response schemas against spec definitions.
-
-### 2. ⚡ AsyncAPI (Kafka Event Stream) Contract Testing
-* **What We Implemented:** AsyncAPI 3.0 specification in [events-api.yaml](contracts/events-api.yaml) defining Kafka channels (`order-events`) and message schemas (`OrderCreated`).
-* **Why We Used It:** Validates asynchronous messaging between Order (Publisher) and Shipping/Notification (Subscribers) without manual Kafka payload assertions.
-
-### 3. 🧩 Smart Upstream Dependency Mocking
-* **What We Implemented:** Configured `dependencies.services` in service `specmatic.yaml` files. Specmatic auto-launches mocks for Inventory (`:9001`) and Payment (`:9002`) when testing Order service.
-* **Why We Used It:** Enables true isolated microservice testing. The Order service can be verified without starting live downstream payment or inventory databases.
-
-### 4. 🛡️ Negative Schema Mutations & Resiliency Testing (`schemaResiliencyTests: all`)
-* **What We Implemented:** Enabled `schemaResiliencyTests: all` in `specmatic.yaml` across microservices.
-* **Why We Used It:** Ensures services handle invalid data robustly. Specmatic automatically mutates payloads (nulls, missing required fields, type mismatches) and verifies the SUT responds with proper 4xx codes instead of 500 crashes.
-
-### 5. 🔀 Polymorphic Discriminator Validation (`oneOf` + `discriminator`)
-* **What We Implemented:** Used `oneOf` and `discriminator` in [payment-api.yaml](contracts/payment-api.yaml) for payment types (`CREDIT_CARD` vs `BANK_TRANSFER`).
-* **Why We Used It:** Validates complex real-world data models. Specmatic generates test payloads for every polymorphic branch and validates correct schema selection.
-
-### 6. 🔒 API Security Schemes & Access Control (`X-API-Key`)
-* **What We Implemented:** Added header authentication (`X-API-Key`) to protected endpoints like `DELETE /orders/{id}` in [order-api.yaml](contracts/order-api.yaml).
-* **Why We Used It:** Verifies security enforcement as part of contract tests. Confirms that missing or invalid API keys return `401 Unauthorized`.
-
-### 7. 📖 Dictionary-Driven Data Generation (`dictionary.yaml`)
-* **What We Implemented:** Created [contracts/dictionary.yaml](contracts/dictionary.yaml) defining domain-specific realistic values for item IDs, prices, stock levels, and product names.
-* **Why We Used It:** Prevents test failures caused by completely random data. Ensures Specmatic uses valid domain-specific test values during contract test generation and stubbing.
-
-### 8. 🔄 Arazzo Workflow Integration Testing (Arazzo 1.0 Specification)
-* **What We Implemented:** Authored [place-order.arazzo.yaml](contracts/place-order.arazzo.yaml) executing a multi-step sequence: `placeOrder` ➡️ `getOrder` ➡️ `cancelOrder`.
-* **Why We Used It:** Tests complete end-to-end business transactions across services, passing outputs dynamically between steps and generating HTML coverage reports.
-
-### 9. 🎨 Specmatic Studio Workspace
-* **What We Implemented:** Configured Docker Studio profile on port 9000 with interactive web navigation and workflow canvas authoring.
-* **Why We Used It:** Gives developers and QA engineers a visual UI to inspect contracts, trigger tests against live services, and drag-and-drop endpoints onto an Arazzo canvas.
-
----
-
-## 🔬 How Lab Patterns Improve Testing
-
-| Specmatic Feature / Lab Pattern | What It Does | How It Improves Testing |
-| :--- | :--- | :--- |
-| **Schema Resiliency Testing** | Mutates valid request payloads (nulls, missing fields, out-of-bound numbers). | Eliminates hundreds of manual negative test scripts and prevents `500 Internal Server Error` production crashes. |
-| **Polymorphic Discriminator** | Validates request/response bodies taking multiple structural forms (`oneOf`). | Ensures 100% test coverage across every schema branch, preventing silent deserialization bugs. |
-| **Arazzo Integration Workflows** | Executes multi-step business transactions (`placeOrder` ➡️ `getOrder` ➡️ `cancelOrder`). | Moves beyond isolated single-endpoint testing to catch dynamic state management and parameter extraction bugs. |
-| **API Security Schemes** | Asserts security constraints (`X-API-Key` headers on destructive routes). | Automates security compliance, ensuring key-less requests are rejected (`401 Unauthorized`). |
-| **Dictionary-Driven Generation** | Supplies domain-specific realistic values to Specmatic's random data generator. | Prevents false-negative test failures from arbitrary random numbers and ensures mock stubs mirror production data. |
-| **Specmatic Studio Workspace** | Web UI for inspecting specs, executing tests, and visually authoring workflows. | Lowers barrier to entry for QA and non-coders to design, debug, and review integration workflows visually. |
-
----
-
-## 🔬 Specmatic Labs Integration Mapping
-
-| GitHub Lab Repository | How Integrated in This Project | Implementation Files |
-| :--- | :--- | :--- |
-| `schema-resiliency-testing` | Enabled `schemaResiliencyTests: all` setting in service configurations. | [order-service/specmatic.yaml](order-service/specmatic.yaml) |
-| `schema-design` | Added polymorphic `oneOf` request schemas with explicit `discriminator` property. | [contracts/payment-api.yaml](contracts/payment-api.yaml) |
-| `arazzo-workflow-testing` | Authored Arazzo 1.0 workflow spec defining dynamic parameter passing & success criteria. | [contracts/place-order.arazzo.yaml](contracts/place-order.arazzo.yaml) |
-| `api-resiliency-testing` | Implemented `X-API-Key` header security parameters and 401 Unauthorized handling. | [contracts/order-api.yaml](contracts/order-api.yaml) |
-| `mcp-auto-test` | Configured Specmatic Studio web interface container profile on port 9000. | [docker-compose.yaml](docker-compose.yaml) |
-| Dictionary Pattern | Created domain dictionary with curated prices, stock, and names. | [contracts/dictionary.yaml](contracts/dictionary.yaml) |
-
----
-
-## 💻 Commands & Execution Guide
-
-### 1. Run Full Contract & Workflow Test Suite
-Execute from project root directory:
 ```bash
-docker compose up specmatic-test --build --abort-on-container-exit
-```
-* **Test Sequence Executed:**
-  1. Inventory Service Contract Tests (100% Coverage)
-  2. Payment Service Contract Tests (100% Coverage)
-  3. Order Service Contract Tests (100% Coverage, automatic Inventory/Payment/Kafka mocking)
-  4. Shipping Service Contract Tests (100% Coverage, automatic Kafka event injection)
-  5. Notification Service Contract Tests (Consumer-only isolated contract testing via OPERATION-ID filter)
-  6. Arazzo Integration Workflow Tests (100% Workflow Coverage: `placeOrder` ➡️ `getOrder` ➡️ `cancelOrder`)
-### 2. Clean Up Containers & Networks
-```bash
+cp .env.example .env          # generate values with `openssl rand -hex 16`
+# put your Specmatic Enterprise license at ./license.txt (gitignored)
+
+docker compose up specmatic-tests --build --abort-on-container-exit
 docker compose down -v
 ```
 
+The run fails immediately if `ORDER_API_KEY` or `PAYMENT_SERVICE_TOKEN` is
+missing — no credential has a working default.
+
+A clean run produces:
+
+| Suite | Result |
+| :--- | :--- |
+| OpenAPI contract tests | 111 tests, 100% API coverage |
+| AsyncAPI contract test | 1 test |
+| Arazzo workflows | 4 workflows, 15 steps, 100% coverage |
+
+Reports land in `build/reports/specmatic/`:
+
+- `test/html/index.html` — REST contract tests and the API coverage table
+- `async/test/html/index.html` — Kafka contract test
+- `arazzo/html/index.html` — the cross-service workflows
+- `stub/html/index.html` — what the Inventory and Payment mocks served
+- `async/stub/html/index.html` — what the Kafka mock saw on `order-events`
+- `**/ctrf/ctrf-report.json` — the same data as CTRF JSON for CI tooling
+
+Each HTML report lists every generated test with its request, response and
+verdict, plus per-operation and per-status-code coverage and anything reported as
+`not tested`, `not implemented` or `missing in spec`.
+
 ---
 
-## 📊 Interactive Documentation Dashboard
+## Architecture
 
-View the interactive HTML dashboard detailing the architecture, statistics, and features:
-👉 Open **[specmatic_architecture_overview.html](specmatic_architecture_overview.html)** in your browser.
+```
+       ┌───────────────────────────────────────────────────────────┐
+       │  specmatic-tests    runs the mocks, then the tests         │
+       │    :9001  Inventory mock      :9002  Payment mock          │
+       └───▲──────────────▲───────────────────────────────────────┘
+           │ upstream     │ upstream
+           │              │
+┌──────────┴────────┐  ┌──┴──────────────┐  ┌───────────────────┐
+│ Inventory Service │  │  Order Service  │  │  Payment Service  │
+│      :3001        │  │      :3000      │  │      :3002        │
+└───────────────────┘  └────────┬────────┘  └───────────────────┘
+   (real services, contract     │ publishes OrderCreated
+    tested directly)            ▼
+                     ┌──────────────────────┐
+                     │   kafka       :9092  │
+                     │   order-events topic │
+                     └──────────┬───────────┘
+              ┌─────────────────┴─────────────────┐
+              ▼                                   ▼
+     ┌───────────────────┐             ┌───────────────────┐
+     │ Shipping Service  │             │ Notification Svc  │
+     │      :3003        │             │  (consumer only)  │
+     └───────────────────┘             └───────────────────┘
+```
+
+- **Order Service** (`:3000`) — `POST /orders`, `GET /orders/{id}`,
+  `DELETE /orders/{id}`. Calls inventory and payment, then publishes
+  `OrderCreated`. Its upstream calls go to the Specmatic mocks so it can be
+  tested in isolation from real inventory and payment state.
+- **Inventory Service** (`:3001`) — `GET /items/{id}`, `POST /items/reserve`.
+- **Payment Service** (`:3002`) — `POST /payments`, polymorphic card vs
+  bank-transfer request, bearer-token protected.
+- **Shipping Service** (`:3003`) — consumes `order-events`, exposes
+  `GET /shipments/{orderId}`.
+- **Notification Service** — Kafka consumer, no HTTP surface.
+
+Host ports are remapped to `1300x`; inside the compose network services talk on
+their real ports. The Inventory and Payment mocks are published on `9001`/`9002`
+and the Kafka broker on `9092`, so a local client can address any of them:
+`curl localhost:13001/items/1`.
+
+---
+
+## Configuration layout
+
+**`specmatic.yaml`** is the only Specmatic config in the project. It holds the
+specs under test with their base URLs and security schemes, the AsyncAPI test
+target, the Arazzo workflows in `workflows/`, every dependency mock, the
+response-to-request chaining, and the governance gates. One `specmatic run-suite`
+starts the mocks and then runs all three test phases from it.
+
+**`docker-compose.yaml`** holds only orchestration: host port mappings, where
+each service finds its peers, the secrets, and start-up ordering. Its one piece
+of scripting writes the Arazzo workflow inputs from the environment before the
+suite runs — Arazzo files have no environment substitution of their own.
+
+**Each service's `Dockerfile`** holds what is intrinsic to that image — the port
+it listens on (`ENV PORT` / `EXPOSE`) and how to tell whether it is healthy
+(`HEALTHCHECK`). Compose waits on those healthchecks via `depends_on`.
+
+`docker compose up specmatic-tests` starts only that service's dependency graph,
+so every service the suite exercises is listed in its `depends_on`.
+
+---
+
+## What is implemented
+
+- **OpenAPI 3.0 contract testing** — Specmatic generates requests from the specs,
+  calls the running services and validates every response against the schema.
+- **AsyncAPI 3.0 contract testing over Kafka** — `events-api.yaml` defines the
+  `order-events` channel and the `OrderCreated` message.
+- **Schema resiliency testing** (`schemaResiliencyTests: all`) — every valid
+  payload is mutated with nulls, missing required fields and type/range
+  violations, and the service must answer 4xx, never 500.
+- **Polymorphic `oneOf` + `discriminator`** — `payment-api.yaml` models card and
+  bank-transfer payments; every branch is tested.
+- **Security schemes with credentials from the environment.**
+- **Dependency mocking** — the Inventory and Payment HTTP mocks Order Service
+  calls, plus a Kafka mock that validates every message published to
+  `order-events` against the schema. All declared in the one config and started
+  by `specmatic run-suite`.
+- **Dictionary-driven generation** — domain values for the Inventory mock.
+- **Externalised examples** — `contracts/examples/` supplies the 401 cases for
+  `DELETE /orders/{id}` and `POST /payments`, without committing a real credential.
+- **Overlay** — narrows the async test to the consumer side without editing the
+  checked-in spec.
+- **Response-to-request chaining** (`workflow.ids`) — config-driven: the orderId
+  from `POST /orders` is threaded into the later `GET` and `DELETE`.
+- **Arazzo 1.1 workflows** — `workflows/place-order.arazzo.yaml` holds four
+  workflows covering the client-facing path, the internal hops Order Service
+  makes, the cancellation auth sequence, and an inventory failure translating
+  into a 400. Referenced from `specmatic.yaml`, not the command line.
+- **Governance gates** — `minCoveragePercentage: 100`,
+  `maxMissedOperationsInSpec: 0`, `enforce: true`.
+- **HTML + CTRF reports**, uploaded as a CI artifact.
