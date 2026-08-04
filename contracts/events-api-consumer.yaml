@@ -1,0 +1,61 @@
+asyncapi: 3.0.0
+info:
+  title: Microservices Event Stream - Consumer View
+  version: 1.0.0
+  description: |
+    The consumer half of events-api.yaml, used by the standalone AsyncAPI
+    contract test. That test can only assert the receive side: nothing in a
+    plain contract run makes Order Service publish, so a test generated for the
+    send operation has no trigger and can only time out.
+
+    The send side is asserted by the Arazzo workflow instead, where placing an
+    order is what causes the publish. Arazzo reads the full events-api.yaml, so
+    it still sees publishOrderCreated.
+
+    The OrderCreated payload is repeated here rather than referenced: Specmatic's
+    AsyncAPI parser does not resolve cross-file $refs for channels or messages.
+    Keep this schema in step with events-api.yaml.
+servers:
+  localKafka:
+    host: kafka:9092
+    protocol: kafka
+    description: Development Kafka broker
+channels:
+  orderEvents:
+    address: order-events
+    messages:
+      orderCreated:
+        $ref: "#/components/messages/OrderCreated"
+operations:
+  subscribeOrderCreated:
+    description: Subscribes to order updates to trigger shipping and notifications
+    action: receive
+    channel:
+      $ref: "#/channels/orderEvents"
+    messages:
+      - $ref: "#/channels/orderEvents/messages/orderCreated"
+components:
+  messages:
+    OrderCreated:
+      name: OrderCreated
+      title: Order Created Event
+      contentType: application/json
+      correlationId:
+        description: The id of the order this event was raised for
+        location: '$message.payload#/orderId'
+      payload:
+        type: object
+        required:
+          - orderId
+          - itemId
+          - quantity
+          - price
+        properties:
+          orderId:
+            type: integer
+          itemId:
+            type: integer
+          quantity:
+            type: integer
+          price:
+            type: integer

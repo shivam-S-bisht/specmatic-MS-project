@@ -62,6 +62,16 @@ workflows:
           orderId: '$response.body#/orderId'
           quantity: '$response.body#/quantity'
 
+      - stepId: orderCreatedEvent
+        description: The OrderCreated event carries the order just placed
+        operationId: '$sourceDescriptions.OrderEvents.publishOrderCreated'
+        action: receive
+        correlationId: '$steps.placeOrder.outputs.orderId'
+        successCriteria:
+          - condition: '$message.payload#/orderId == $steps.placeOrder.outputs.orderId'
+          - condition: '$message.payload#/itemId == $steps.browseCatalogue.outputs.itemId'
+          - condition: '$message.payload#/quantity == $steps.placeOrder.outputs.quantity'
+
       - stepId: trackShipment
         description: Shipping Service turned the event into a shipment
         operationId: '$sourceDescriptions.ShippingApi.getShipment'
