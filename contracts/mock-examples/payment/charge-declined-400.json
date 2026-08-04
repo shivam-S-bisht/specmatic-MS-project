@@ -1,0 +1,11 @@
+{
+  "_comment": "A charge of 111 is declined. Matched partially so the order id, which varies per run, is ignored.",
+  "partial": {
+    "http-request": { "path": "/payments", "method": "POST", "body": { "amount": 111 } },
+    "http-response": {
+      "status": 400,
+      "headers": { "Content-Type": "application/json" },
+      "body": { "error": "Payment declined" }
+    }
+  }
+}

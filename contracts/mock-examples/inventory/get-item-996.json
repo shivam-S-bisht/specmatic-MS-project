@@ -1,0 +1,9 @@
+{
+  "_comment": "Pins a known price for item 996 so the amount Order Service sends to Payment is deterministic, and the payment mock can match on it.",
+  "http-request": { "path": "/items/996", "method": "GET" },
+  "http-response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": { "id": 996, "name": "Laptop", "price": 111, "stock": 50 }
+  }
+}

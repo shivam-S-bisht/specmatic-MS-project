@@ -17,6 +17,9 @@ sourceDescriptions:
   - name: ShippingApi
     type: openapi
     url: ../contracts/shipping-api.yaml
+  - name: OrderEvents
+    type: asyncapi
+    url: ../contracts/events-api.yaml
 
 workflows:
   # ---------------------------------------------------------------------------
@@ -257,11 +260,11 @@ workflows:
   #    400. Driven by the inventory mock's ITEM_NOT_FOUND example, so the
   #    failure is reproducible rather than dependent on real stock levels.
   # ---------------------------------------------------------------------------
-  - workflowId: OrderRejectedByInventory
-    summary: An unknown item is rejected at the order boundary, not with a 500
+  - workflowId: OrderRejectedByDownstream
+    summary: Inventory and Payment failures surface as an order 400, not a 500
     steps:
-      - stepId: placeOrderForUnknownItem
-        description: Inventory cannot find item 999, so the order is refused with 400
+      - stepId: itemNotFound
+        description: Inventory cannot find item 999
         operationId: '$sourceDescriptions.OrderApi.placeOrder'
         requestBody:
           contentType: application/json
@@ -270,3 +273,84 @@ workflows:
             quantity: 1
         successCriteria:
           - condition: '$statusCode == 400'
+
+      - stepId: itemLookupRejected
+        description: Inventory rejects the lookup for item 998 with a 400
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 998
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+      - stepId: stockReservationRejected
+        description: Item 997 is priced fine but cannot be reserved
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 997
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+      - stepId: paymentDeclined
+        description: Item 996 costs 111, which the payment mock declines
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 996
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+      - stepId: paymentUnauthorized
+        description: Item 995 costs 222, which the payment mock rejects as unauthorised
+        operationId: '$sourceDescriptions.OrderApi.placeOrder'
+        requestBody:
+          contentType: application/json
+          payload:
+            itemId: 995
+            quantity: 1
+        successCriteria:
+          - condition: '$statusCode == 400'
+
+  # ---------------------------------------------------------------------------
+  # 5. The consumer side, driven from the other direction: the workflow puts an
+  #    OrderCreated on the channel itself and asserts Shipping Service acted on
+  #    it. Nothing else exercises the mock's send capability.
+  # ---------------------------------------------------------------------------
+  - workflowId: ShippingConsumesOrderEvent
+    summary: An OrderCreated event on order-events becomes a shipment
+    steps:
+      - stepId: publishOrderCreated
+        description: Put an OrderCreated for order 4242 on the channel
+        operationId: '$sourceDescriptions.OrderEvents.subscribeOrderCreated'
+        action: send
+        requestBody:
+          contentType: application/json
+          payload:
+            orderId: 4242
+            itemId: 1
+            quantity: 2
+            price: 1200
+
+      - stepId: shipmentCreatedFromEvent
+        description: Shipping Service consumed the event and created the shipment
+        operationId: '$sourceDescriptions.ShippingApi.getShipment'
+        parameters:
+          - name: orderId
+            in: path
+            value: 4242
+        successCriteria:
+          - condition: '$statusCode == 200'
+        onFailure:
+          - name: waitForKafkaConsumer
+            type: retry
+            retryAfter: 1
+            retryLimit: 10
+            criteria:
+              - condition: '$statusCode == 404'

@@ -105,6 +105,9 @@ dependencies:
         data:
           dictionary:
             path: ./contracts/dictionary.yaml
+          examples:
+            - directories:
+                - ./contracts/mock-examples/inventory
     - service:
         description: Payment Service mock consumed by Order Service
         definitions:
@@ -117,6 +120,10 @@ dependencies:
           openapi:
             type: mock
             baseUrl: ${PAYMENT_MOCK_URL:http://specmatic-tests:9002}
+        data:
+          examples:
+            - directories:
+                - ./contracts/mock-examples/payment
     - service:
         description: Kafka broker and order-events mock consumed by every service
         definitions:
