@@ -2,10 +2,13 @@ openapi: 3.0.1
 info:
   title: Inventory Service API
   version: 1.0.0
+servers:
+  - url: http://inventory-service:3001
 paths:
   /items/reserve:
     post:
       summary: Reserve stock for an item
+      operationId: reserveStock
       requestBody:
         required: true
         content:
@@ -54,6 +57,7 @@ paths:
   /items/{id}:
     get:
       summary: Fetch item details by ID
+      operationId: getItem
       parameters:
         - name: id
           in: path
