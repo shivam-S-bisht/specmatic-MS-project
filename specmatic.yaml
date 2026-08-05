@@ -41,7 +41,6 @@ systemUnderTest:
     runOptions:
       openapi:
         type: test
-        filter: "PATH!='/swagger.json'"
         workflow:
           ids:
             "POST /orders -> 201":
@@ -53,24 +52,32 @@ systemUnderTest:
         specs:
           - spec:
               id: inventoryApiSpec
-              baseUrl: ${INVENTORY_BASE_URL:http://inventory-service:3001}
+              baseUrl: "${INVENTORY_URL:http://inventory-service:3001}"
+              actuatorUrl: "${INVENTORY_URL:http://inventory-service:3001}/actuator/mappings"
+              swaggerUrl: "${INVENTORY_URL:http://inventory-service:3001}/swagger.json"
           - spec:
               id: paymentApiSpec
-              baseUrl: ${PAYMENT_BASE_URL:http://payment-service:3002}
+              baseUrl: "${PAYMENT_URL:http://payment-service:3002}"
+              actuatorUrl: "${PAYMENT_URL:http://payment-service:3002}/actuator/mappings"
+              swaggerUrl: "${PAYMENT_URL:http://payment-service:3002}/swagger.json"
               securitySchemes:
                 bearerAuth:
                   type: bearer
                   token: ${PAYMENT_SERVICE_TOKEN:unset}
           - spec:
               id: orderApiSpec
-              baseUrl: ${ORDER_BASE_URL:http://order-service:3000}
+              baseUrl: "${ORDER_URL:http://order-service:3000}"
+              actuatorUrl: "${ORDER_URL:http://order-service:3000}/actuator/mappings"
+              swaggerUrl: "${ORDER_URL:http://order-service:3000}/swagger.json"
               securitySchemes:
                 apiKeyAuth:
                   type: apiKey
                   token: ${ORDER_API_KEY:unset}
           - spec:
               id: shippingApiSpec
-              baseUrl: ${SHIPPING_BASE_URL:http://shipping-service:3003}
+              baseUrl: "${SHIPPING_URL:http://shipping-service:3003}"
+              actuatorUrl: "${SHIPPING_URL:http://shipping-service:3003}/actuator/mappings"
+              swaggerUrl: "${SHIPPING_URL:http://shipping-service:3003}/swagger.json"
       asyncapi:
         type: test
         servers:

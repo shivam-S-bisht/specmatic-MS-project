@@ -25,7 +25,7 @@ A clean run produces:
 
 | Suite | Result |
 | :--- | :--- |
-| OpenAPI contract tests | 111 tests, 100% API coverage |
+| OpenAPI contract tests | 115 tests, 21 operations, 100% API coverage |
 | AsyncAPI contract test | 1 test |
 | Arazzo workflows | 5 workflows, 22 steps, 100% coverage |
 
@@ -82,6 +82,11 @@ verdict, plus per-operation and per-status-code coverage and anything reported a
   `GET /shipments/{orderId}`.
 - **Notification Service** — Kafka consumer, no HTTP surface.
 
+Every HTTP service also serves `GET /swagger.json` (its own contract, read from
+the mounted `contracts/`) and `GET /actuator/mappings` (the endpoints it actually
+implements). Both are declared in the specs, so neither is an exception to the
+coverage gate.
+
 Host ports are remapped to `1300x`; inside the compose network services talk on
 their real ports. The Inventory and Payment mocks are published on `9001`/`9002`
 and the Kafka broker on `9092`, so a local client can address any of them:
@@ -92,10 +97,15 @@ and the Kafka broker on `9092`, so a local client can address any of them:
 ## Configuration layout
 
 **`specmatic.yaml`** is the only Specmatic config in the project. It holds the
-specs under test with their base URLs and security schemes, the AsyncAPI test
-target, the Arazzo workflows in `workflows/`, every dependency mock, the
-response-to-request chaining, and the governance gates. One `specmatic run-suite`
-starts the mocks and then runs all three test phases from it.
+specs under test with their base URLs, actuator URLs and security schemes, the
+AsyncAPI test target, the Arazzo workflows in `workflows/`, every dependency
+mock, the response-to-request chaining, and the governance gates. One
+`specmatic run-suite` starts the mocks and then runs all three test phases from
+it.
+
+Each service's URLs come from a single variable — `${ORDER_URL}`, `${PAYMENT_URL}`
+and so on — with the actuator and swagger paths appended, so pointing a service
+elsewhere is one override rather than three that can drift apart.
 
 **`docker-compose.yaml`** holds only orchestration: host port mappings, where
 each service finds its peers, the secrets, and start-up ordering. Its one piece
@@ -145,6 +155,13 @@ so every service the suite exercises is listed in its `depends_on`.
   cancellation auth sequence, every downstream failure surfacing as a 400, and
   an event placed on the channel becoming a shipment. Referenced from
   `specmatic.yaml`, not the command line.
+- **Endpoint discovery** — each service exposes `GET /actuator/mappings` in the
+  Spring Actuator shape, built by walking its own Express route table. Specmatic
+  reads it via the per-spec `actuatorUrl` and compares what a service implements
+  against what its spec declares, so an endpoint that exists in code but was
+  never specified is reported as `missing in spec`. Without it
+  `maxMissedOperationsInSpec` has nothing to grade — coverage alone stays at 100%
+  while an undeclared endpoint goes unnoticed.
 - **Governance gates** — `minCoveragePercentage: 100`,
   `maxMissedOperationsInSpec: 0`, `enforce: true`.
 - **HTML + CTRF reports**, uploaded as a CI artifact.

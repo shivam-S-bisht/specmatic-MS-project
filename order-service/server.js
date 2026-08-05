@@ -1,4 +1,5 @@
 const express = require('express');
+const actuatorMappings = require('./actuator');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
@@ -48,6 +49,8 @@ async function connectKafka() {
   }
 }
 connectKafka();
+
+app.get('/actuator/mappings', actuatorMappings(app, 'orderService'));
 
 // Serve swagger spec
 app.get('/swagger.json', (req, res) => {

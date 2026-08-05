@@ -5,6 +5,18 @@ info:
 servers:
   - url: http://order-service:3000
 paths:
+  /swagger.json:
+    get:
+      summary: OpenAPI specification served by this service
+      operationId: swaggerJson
+      responses:
+        '200':
+          description: The OpenAPI document for this service
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /orders:
     post:
       summary: Place a new order

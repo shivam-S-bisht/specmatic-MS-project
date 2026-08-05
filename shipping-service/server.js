@@ -1,4 +1,5 @@
 const express = require('express');
+const actuatorMappings = require('./actuator');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
@@ -56,6 +57,8 @@ async function startConsumer() {
   }
 }
 startConsumer();
+
+app.get('/actuator/mappings', actuatorMappings(app, 'shippingService'));
 
 // Serve swagger spec
 app.get('/swagger.json', (req, res) => {

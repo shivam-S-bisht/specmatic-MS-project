@@ -1,4 +1,5 @@
 const express = require('express');
+const actuatorMappings = require('./actuator');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
@@ -14,6 +15,8 @@ if (!PAYMENT_SERVICE_TOKEN) {
   console.error('PAYMENT_SERVICE_TOKEN is not set. Refusing to start. See .env.example.');
   process.exit(1);
 }
+
+app.get('/actuator/mappings', actuatorMappings(app, 'paymentService'));
 
 // Serve swagger spec
 app.get('/swagger.json', (req, res) => {

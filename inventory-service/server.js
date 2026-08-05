@@ -1,4 +1,5 @@
 const express = require('express');
+const actuatorMappings = require('./actuator');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
@@ -13,6 +14,8 @@ const SWAGGER_PATH = process.env.SWAGGER_PATH || path.join(__dirname, '..', 'con
 const items = {
   1: { id: 1, name: 'Laptop', price: 1200, stock: 50 }
 };
+
+app.get('/actuator/mappings', actuatorMappings(app, 'inventoryService'));
 
 // Serve swagger spec
 app.get('/swagger.json', (req, res) => {

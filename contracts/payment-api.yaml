@@ -5,6 +5,18 @@ info:
 servers:
   - url: http://payment-service:3002
 paths:
+  /swagger.json:
+    get:
+      summary: OpenAPI specification served by this service
+      operationId: swaggerJson
+      responses:
+        '200':
+          description: The OpenAPI document for this service
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /payments:
     post:
       summary: Charge amount for order
