@@ -5,6 +5,18 @@ info:
 servers:
   - url: http://inventory-service:3001
 paths:
+  /swagger.json:
+    get:
+      summary: OpenAPI specification served by this service
+      operationId: swaggerJson
+      responses:
+        '200':
+          description: The OpenAPI document for this service
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /items/reserve:
     post:
       summary: Reserve stock for an item
