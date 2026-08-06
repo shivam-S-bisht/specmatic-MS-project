@@ -148,7 +148,7 @@ app.post('/orders', async (req, res) => {
   const amount = itemPrice * quantity;
   try {
     console.log(`Charging ${amount} for order ${orderId} via ${PAYMENT_SERVICE_URL}...`);
-    const paymentResponse = await fetch(`${PAYMENT_SERVICE_URL}/payments`, {
+    const paymentResponse = await fetch(`${PAYMENT_SERVICE_URL}/charge-payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
